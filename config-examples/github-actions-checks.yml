@@ -1,0 +1,23 @@
+name: Vérifications
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, mbstring, openssl, pdo_sqlite, gmp
+          tools: composer:v2
+          coverage: none
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Syntaxe PHP
+        run: find . -path './vendor' -prune -o -name '*.php' -type f -print0 | xargs -0 -n1 php -l
+      - run: php tests/install.php

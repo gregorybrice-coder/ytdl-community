@@ -86,7 +86,7 @@ composer validate --strict
 php tests/install.php
 ```
 
-Le test d’installation crée exclusivement des données temporaires : base vide, premier administrateur, clés privées, refus d’une seconde initialisation et configuration SMTP sans envoi. La CI fournie prévoit PHP 8.3, 8.4 et 8.5. Ces tests ne couvrent pas les échanges réels avec YouTube, SMTP, les passkeys ou les services de notifications.
+Le test d’installation crée exclusivement des données temporaires : base vide, premier administrateur, clés privées, refus d’une seconde initialisation et configuration SMTP sans envoi. Un [exemple de workflow GitHub Actions](config-examples/github-actions-checks.yml) prévoit PHP 8.3, 8.4 et 8.5. Pour l’activer, copiez-le dans `.github/workflows/checks.yml` avec une autorisation GitHub permettant de modifier les workflows. Il n’est pas encore actif sur ce dépôt. Ces tests ne couvrent pas les échanges réels avec YouTube, SMTP, les passkeys ou les services de notifications.
 
 ## Apparences et médias
 

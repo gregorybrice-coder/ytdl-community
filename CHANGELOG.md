@@ -8,6 +8,6 @@
 - Initialisation du premier administrateur en ligne de commande et génération locale de nouvelles clés.
 - Exemples SMTP, routeur local protégé, règles Apache et documentation d’installation.
 - Exclusion des données, journaux, dépendances embarquées, médias et illustrations personnelles.
-- Tests d’installation isolés et workflow GitHub Actions.
+- Tests d’installation isolés et exemple de workflow GitHub Actions à activer.
 
 L’installation personnelle à l’origine de cette copie n’a pas été modifiée.
