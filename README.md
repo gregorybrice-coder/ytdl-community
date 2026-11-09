@@ -1,14 +1,34 @@
-# YTDL — version communautaire
+# YTDL — votre musique sur smartphone et ordinateur
 
-Application musicale auto-hébergée en PHP : téléchargement vidéo ou audio avec yt-dlp, bibliothèque personnelle, playlists, partage entre comptes, paroles, fiches artistes, apparences et installation comme application web.
+**Une application musicale auto-hébergée, pensée aussi pour les smartphones iPhone et Android.** Retrouvez votre bibliothèque, vos playlists et les commandes de lecture dans une interface tactile adaptée au téléphone, à la tablette et à l’ordinateur.
+
+YTDL est une application web installable sur l’écran d’accueil (PWA), avec téléchargement vidéo ou audio via yt-dlp, partage entre comptes, paroles, fiches artistes et plusieurs apparences. Le serveur fonctionne en PHP ; vous gardez la maîtrise de votre installation.
 
 Cette édition est issue d’une installation personnelle, rendue indépendante de son serveur d’origine. Elle est distribuée sous **GPL-3.0-only**. Elle ne contient aucun compte préconfiguré, bibliothèque musicale, cookie de connexion ou clé de notification de l’instance d’origine.
+
+## Sur smartphone
+
+- **Une interface dédiée aux petits écrans** : navigation tactile, disque pour parcourir les titres et commandes réorganisées pour le format portrait.
+- **Sur l’écran d’accueil** : ouvrez votre instance dans le navigateur du téléphone, puis utilisez l’option d’ajout à l’écran d’accueil ou d’installation proposée par le navigateur. L’application peut ensuite s’ouvrir dans sa propre fenêtre.
+- **Votre bibliothèque entre appareils** : connectez-vous au même compte depuis votre téléphone, votre tablette ou votre ordinateur pour retrouver les titres et playlists de votre serveur.
+
+Pour une installation publique, utilisez une adresse **HTTPS** accessible depuis le téléphone. Les options d’installation, les notifications et le partage natif dépendent du navigateur et du système. Les captures ci-dessous illustrent la mise en page mobile ; elles ne constituent pas un test de toutes les fonctions sur des appareils physiques.
 
 ## Captures d’écran
 
 Captures de l’application avec un compte et des titres fictifs de démonstration. Aucun contenu ni renseignement personnel de l’installation d’origine n’est montré.
 
-### Sillon · vinyle noir et orange
+### Version smartphone
+
+Vues mobiles **393 × 852 pixels CSS**, capturées avec l’émulation smartphone du navigateur (images en haute définition). Comptes, artistes et titres affichés : données fictives de démonstration.
+
+| Sillon · noir et orange | Platine · interface claire | Orbite · ambiance lumineuse |
+| --- | --- | --- |
+| ![YTDL sur smartphone, apparence Sillon](docs/screenshots/mobile-sillon.png) | ![YTDL sur smartphone, apparence Platine](docs/screenshots/mobile-platine.png) | ![YTDL sur smartphone, apparence Orbite](docs/screenshots/mobile-orbite.png) |
+
+### Version ordinateur
+
+#### Sillon · vinyle noir et orange
 
 ![Bibliothèque YTDL, apparence Sillon](docs/screenshots/sillon.jpg)
 

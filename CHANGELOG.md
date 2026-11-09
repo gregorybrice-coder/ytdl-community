@@ -1,5 +1,11 @@
 # Changements de l’édition communautaire
 
+## Présentation smartphone — 9 novembre 2026
+
+- Mise en avant de l’interface tactile pour smartphone, de la PWA et de l’installation sur l’écran d’accueil.
+- Trois captures mobiles en format portrait, placées avant les captures pour ordinateur dans le README.
+- Mention explicite des données fictives et de l’émulation smartphone utilisée pour les captures.
+
 ## Présentation et installation neuve — 9 novembre 2026
 
 - Trois captures d’écran (Sillon, Platine et Orbite) avec des données fictives, affichées dans le README.
