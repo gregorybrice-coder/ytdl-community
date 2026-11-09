@@ -1,5 +1,11 @@
 # Changements de l’édition communautaire
 
+## Présentation et installation neuve — 9 novembre 2026
+
+- Trois captures d’écran (Sillon, Platine et Orbite) avec des données fictives, affichées dans le README.
+- Création des colonnes de quota et de playlist de reprise sur une base neuve ; ces colonnes existaient seulement dans la base historique.
+- Deux vérifications supplémentaires du schéma d’installation.
+
 ## Préparation initiale — 9 novembre 2026
 
 - Licence GPL-3.0-only et historique Git indépendant.

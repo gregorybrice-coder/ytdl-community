@@ -7,6 +7,8 @@ function runPhp(array $args): array {$p=proc_open(array_merge([PHP_BINARY],$args
 function cleanup(string $path): void {if(is_dir($path)){foreach(new FilesystemIterator($path) as $item)cleanup($item->getPathname());rmdir($path);}else unlink($path);}
 try {
  require $root.'/db.php';$db=ytdl_db();
+ check($db->query('SELECT quota_bytes FROM users LIMIT 1') !== false,'Colonne de quota présente sur base neuve');
+ check($db->query('SELECT playlist_id FROM playback_state LIMIT 1') !== false,'Colonne de playlist de reprise présente sur base neuve');
  check((int)$db->query('SELECT COUNT(*) FROM users')->fetchColumn()===0,'Aucun compte personnel par défaut');
  check(YTDL_DATA_DIR===realpath($temp.'/private'),'Base isolée');check(YTDL_VAPID_PRIVATE_KEY==='','Aucune clé privée préinstallée');
  $args=[$root.'/scripts/setup.php','--name=Community Admin','--email=admin@example.org','--url=http://localhost:8080/ytdl'];

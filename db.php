@@ -296,6 +296,16 @@ function ytdl_db(): PDO {
         $pdo->exec('ALTER TABLE artists ADD COLUMN locked INTEGER NOT NULL DEFAULT 0');
     }
 
+    // Certaines installations historiques avaient ajouté ces colonnes manuellement.
+    $quotaCols = array_column($pdo->query('PRAGMA table_info(users)')->fetchAll(), 'name');
+    if (!in_array('quota_bytes', $quotaCols, true)) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN quota_bytes INTEGER');
+    }
+    $resumeCols = array_column($pdo->query('PRAGMA table_info(playback_state)')->fetchAll(), 'name');
+    if (!in_array('playlist_id', $resumeCols, true)) {
+        $pdo->exec('ALTER TABLE playback_state ADD COLUMN playlist_id INTEGER REFERENCES playlists(id) ON DELETE SET NULL');
+    }
+
     // Notifications "nouveauté" ponctuelles (une par fonctionnalité annoncée,
     // pas un fil au sens messagerie). Un compte peut en avoir PLUSIEURS en
     // attente à la fois (ex. deux fonctionnalités ajoutées avant sa prochaine

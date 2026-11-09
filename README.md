@@ -4,6 +4,18 @@ Application musicale auto-hébergée en PHP : téléchargement vidéo ou audio a
 
 Cette édition est issue d’une installation personnelle, rendue indépendante de son serveur d’origine. Elle est distribuée sous **GPL-3.0-only**. Elle ne contient aucun compte préconfiguré, bibliothèque musicale, cookie de connexion ou clé de notification de l’instance d’origine.
 
+## Captures d’écran
+
+Captures de l’application avec un compte et des titres fictifs de démonstration. Aucun contenu ni renseignement personnel de l’installation d’origine n’est montré.
+
+### Sillon · vinyle noir et orange
+
+![Bibliothèque YTDL, apparence Sillon](docs/screenshots/sillon.jpg)
+
+| Platine · interface claire | Orbite · interface lumineuse |
+| --- | --- |
+| ![Apparence Platine](docs/screenshots/platine.jpg) | ![Apparence Orbite](docs/screenshots/orbite.jpg) |
+
 ## Prérequis
 
 - PHP 8.3 ou supérieur, avec PDO SQLite, cURL, mbstring et OpenSSL ; GMP recommandé pour Web Push. Composer vérifie les extensions nécessaires aux dépendances.
