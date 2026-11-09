@@ -6,6 +6,14 @@ YTDL est une application web installable sur l’écran d’accueil (PWA), avec 
 
 Cette édition est issue d’une installation personnelle, rendue indépendante de son serveur d’origine. Elle est distribuée sous **GPL-3.0-only**. Elle ne contient aucun compte préconfiguré, bibliothèque musicale, cookie de connexion ou clé de notification de l’instance d’origine.
 
+## Offrez-moi un café ☕
+
+YTDL vous est utile ? Vous pouvez soutenir son développement avec un café à **2 €**, via PayPal.
+
+[![Offrez-moi un café — 2 € via PayPal](docs/support-coffee.svg)](https://www.paypal.com/ncp/payment/LJ6ZMLAZTLJLY)
+
+Ce soutien est entièrement facultatif : le code reste libre et accessible gratuitement sous GPLv3.
+
 ## Sur smartphone
 
 - **Une interface dédiée aux petits écrans** : navigation tactile, disque pour parcourir les titres et commandes réorganisées pour le format portrait.

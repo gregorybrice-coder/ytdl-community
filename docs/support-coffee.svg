@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="340" height="48" viewBox="0 0 340 48" role="img" aria-label="Offrez-moi un café — 2 € via PayPal">
+  <rect width="340" height="48" rx="10" fill="#ffc439"/>
+  <g fill="none" stroke="#172c50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 19h18v8a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7zM37 21h3a4 4 0 0 1 0 8h-3M17 37h24M24 11v4M31 10v5"/>
+  </g>
+  <text x="54" y="29" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#172c50">Offrez-moi un café · 2 € via PayPal</text>
+</svg>
