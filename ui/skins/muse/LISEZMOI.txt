@@ -1,0 +1,13 @@
+Images personnelles de l'apparence « Muse »
+=============================================
+
+Dépose ici tes propres illustrations ; elles sont prises en compte
+automatiquement au prochain chargement de la page (aucun réglage) :
+
+  fond.jpg (ou .png / .webp)       photo plein écran, floutée et voilée d'ivoire
+                                   pour ne pas gêner l'interface
+  etiquette.jpg (ou .png / .webp)  centre du disque, quand le morceau n'a
+                                   pas de pochette
+
+Ces fichiers ne sont pas suivis par git (voir .gitignore).
+Le même principe vaut pour les autres apparences : ui/skins/<apparence>/.

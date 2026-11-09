@@ -1,0 +1,99 @@
+/*
+ * Apparence « Platine » : clair et lumineux, vinyle translucide aux reflets
+ * irisés présenté comme un cadran, violet électrique en accent.
+ * Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bg: #eceef4;
+  --bg-rgb: 236, 238, 244;
+  --panel: #ffffff;
+  --panel-rgb: 255, 255, 255;
+  --panel-2: #f4f5f9;
+  --line: rgba(20, 21, 28, .1);
+  --ink-rgb: 20, 21, 28;
+  --edge-rgb: 75, 47, 224;
+  --text: #14151c;
+  --text-rgb: 20, 21, 28;
+  --text-strong: #0b0c12;
+  --text-soft: #3a3c48;
+  --text-dim: #5d6070;
+  --text-faint: #6b6d7c;
+  --on-text: #ffffff;
+  --accent: #4b2fe0;
+  --accent-rgb: 75, 47, 224;
+  --accent-soft: #6d55ff;
+  --accent-text: #4b2fe0;
+  --on-accent: #ffffff;
+  --danger: #c62f2f;
+  --danger-rgb: 198, 47, 47;
+
+  --app-bg: radial-gradient(80% 40% at 85% 6%, #dcd6ff 0%, rgba(220, 214, 255, 0) 70%), radial-gradient(70% 40% at 0% 38%, #ffe2d6 0%, rgba(255, 226, 214, 0) 70%), #eceef4;
+  --app-bg-desktop: radial-gradient(50% 50% at 90% 0%, #dcd6ff 0%, rgba(220, 214, 255, 0) 70%), radial-gradient(40% 50% at 0% 30%, #ffe2d6 0%, rgba(255, 226, 214, 0) 70%), #eceef4;
+  --fill: linear-gradient(90deg, #4b2fe0, #b06bff);
+  --play-bg: #14151c;
+
+  /* Vinyle translucide : reflets irisés sous de fins sillons clairs. */
+  --disc-bg:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 0 2px, rgba(255, 255, 255, .42) 2px 3px),
+    conic-gradient(from 0deg, #ffd1c2, #e6d9ff, #b9ecff, #e9fff1, #ffe9b8, #ffd1c2);
+  --disc-shadow: 0 -20px 60px rgba(75, 47, 224, .18), inset 0 0 0 1px rgba(255, 255, 255, .8);
+  --label-bg: radial-gradient(circle at 50% 50%, #ffffff 0 60%, #f1efff 100%);
+  --label-shadow: 0 0 0 1px rgba(20, 21, 28, .08), 0 6px 24px rgba(75, 47, 224, .18);
+  --label-text: #4b2fe0;
+  --disc-sheen: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .85) 0 18%, rgba(255, 255, 255, .2) 19%, rgba(255, 255, 255, 0) 55%);
+  --spin-time: 2.4s;
+
+  --font-display: 'Syne', system-ui, sans-serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --display-weight: 800;
+  --display-leading: .95;
+  --display-transform: none;
+  --display-spacing: -.03em;
+  --brand-spacing: 0;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+.now-artist { font-family: var(--font-body); font-weight: 700; letter-spacing: .2em; }
+.disc-label span { font: 800 13px var(--font-display); letter-spacing: .04em; }
+.disc-label i { background: #14151c; }
+.disc-label.has-art { background-blend-mode: normal; }
+.needle { width: 18px; height: 5px; }
+
+.wheel-item b { font-family: var(--font-body); font-weight: 800; letter-spacing: -.01em; }
+.wheel-item i { font-family: var(--font-body); font-weight: 600; letter-spacing: .08em; }
+.wheel-item.is-front b { color: var(--text-strong); }
+.wheel-item.is-front i { color: var(--accent); }
+.wheel-item.is-current b { color: var(--accent); }
+.deck.is-filtering .wheel-item.is-match b { color: var(--accent); }
+
+.hub button { background: rgba(255, 255, 255, .8); border-color: rgba(20, 21, 28, .1); color: var(--text-soft); }
+.hub button[aria-pressed="true"] { background: var(--text); color: #fff; border-color: var(--text); box-shadow: 0 6px 18px rgba(20, 21, 28, .25); }
+.deck-sorts button, .deck-sort, .deck-back { background: rgba(255, 255, 255, .78); }
+.deck-sorts button[aria-pressed="true"] { background: var(--text); color: #fff; border-color: var(--text); }
+.tabs button[aria-selected="true"] { background: var(--text); color: #fff; }
+.lyrics p.on { font-family: var(--font-display); font-weight: 800; text-shadow: none; }
+.lyrics p { color: rgba(20, 21, 28, .28); }
+.lyrics p.past { color: rgba(20, 21, 28, .45); }
+.lyrics.is-plain p { color: rgba(20, 21, 28, .78); }
+.play { color: #fff; box-shadow: 0 12px 30px rgba(20, 21, 28, .3), 0 0 0 6px rgba(255, 255, 255, .8); }
+.fill { box-shadow: 0 0 8px rgba(75, 47, 224, .4); }
+.deck-side .ib { background: rgba(255, 255, 255, .78); }
+.sheet { box-shadow: 0 -20px 60px rgba(20, 21, 28, .18); border-top-color: rgba(75, 47, 224, .2); }
+.sheet::backdrop { background: rgba(20, 21, 28, .35); }
+.toast { box-shadow: 0 10px 40px rgba(20, 21, 28, .18); }
+.avatar-ring span { color: var(--accent); }
+.video-layer { color: #f3f4f8; }
+.video-layer .ib, .video-tools { color: #f3f4f8; }
+.video-tools button, .video-layer .sync button { color: #f3f4f8; border-color: rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .08); }
+.video-lyrics, .video-layer .sync .sync-current { color: #ffffff; }
+.video-layer .sync .sync-mark { background: var(--accent); color: #fff; }
+
+@media (max-width: 959px) {
+  .deck { border-top-color: rgba(20, 21, 28, .08); }
+}
+@media (min-width: 960px) {
+  .transport { border-top-color: rgba(20, 21, 28, .08); }
+}

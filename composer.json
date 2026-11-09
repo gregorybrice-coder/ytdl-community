@@ -1,0 +1,10 @@
+{
+    "name": "ytdl-community/ytdl",
+    "description": "Bibliothèque musicale et téléchargements auto-hébergés avec yt-dlp.",
+    "type": "project",
+    "license": "GPL-3.0-only",
+    "require": {
+        "minishlink/web-push": "^11.0",
+        "lbuchs/webauthn": "^2.2"
+    }
+}

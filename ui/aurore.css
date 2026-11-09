@@ -1,0 +1,167 @@
+/*
+ * Apparence « Aurore » : nuit polaire. Une aurore boréale ondule au-dessus
+ * d'un lac gelé, entre des montagnes enneigées ; un chalet veille sur la
+ * rive. L'image (ui/skins/aurore/fond.jpg) est peinte en code par
+ * ui/skins/aurore/peinture.html ; par-dessus, un halo d'aurore vivant
+ * respire lentement. Disque de glace teintée, boutons de verre givré,
+ * titre aux reflets d'aurore. Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bg: #030a16;
+  --bg-rgb: 3, 10, 22;
+  --panel: #071426;
+  --panel-rgb: 7, 20, 38;
+  --panel-2: #0c1d36;
+  --line: rgba(160, 255, 230, .14);
+  --ink-rgb: 210, 245, 255;
+  --edge-rgb: 61, 255, 176;
+  --text: #e6fbff;
+  --text-rgb: 230, 251, 255;
+  --text-strong: #ffffff;
+  --text-soft: #cfe9f2;
+  --text-dim: #93b4c4;
+  --text-faint: #7d9db0;
+  --on-text: #030a16;
+  --accent: #3dffb0;
+  --accent-rgb: 61, 255, 176;
+  --accent-soft: #8dffd6;
+  --accent-text: #6dffc6;
+  --on-accent: #021612;
+  --violet: #a98bff;
+  --rose: #ff8ee0;
+  --sky: #5fd2ff;
+  --aurora: linear-gradient(110deg, #3dffb0, #5fd2ff 40%, #a98bff 72%, #ff8ee0);
+  --danger: #ff5d7a;
+  --danger-rgb: 255, 93, 122;
+
+  /* Fond de secours si l'image est absente ; sinon voir .app::before. */
+  --app-bg:
+    radial-gradient(70% 40% at 40% 18%, rgba(61, 255, 176, .25), transparent 70%),
+    radial-gradient(60% 35% at 75% 10%, rgba(169, 139, 255, .22), transparent 70%),
+    linear-gradient(180deg, #01030c, #0a2346 50%, #030a16);
+  --fill: linear-gradient(90deg, #3dffb0, #5fd2ff 45%, #a98bff 75%, #ff8ee0);
+  --play-bg: radial-gradient(circle at 35% 30%, #c8fff0 0, #3dffb0 35%, #1a9f8a 70%, #3b3a9a 100%);
+
+  /* Disque de glace teintée : fins anneaux de givre, reflets d'aurore,
+     assez translucide pour deviner le lac dessous. */
+  --disc-bg:
+    repeating-radial-gradient(circle at 50% 50%, rgba(170, 255, 235, 0) 0 5px, rgba(170, 255, 235, .055) 5px 6px),
+    conic-gradient(from 210deg, rgba(61, 255, 176, .18), rgba(95, 210, 255, .12), rgba(169, 139, 255, .16), rgba(255, 142, 224, .1), rgba(61, 255, 176, .18)),
+    radial-gradient(circle, rgba(6, 18, 36, .8) 0, rgba(3, 10, 22, .88) 75%);
+  --disc-shadow: 0 0 0 1px rgba(170, 255, 235, .4), 0 0 0 7px rgba(61, 255, 176, .05), 0 0 80px rgba(61, 255, 176, .22);
+  --label-bg: var(--skin-etiquette, conic-gradient(from 20deg, #3dffb0, #5fd2ff, #a98bff, #ff8ee0, #3dffb0));
+  --label-shadow: 0 0 0 2px rgba(3, 10, 22, .9), 0 0 0 3px rgba(170, 255, 235, .5), 0 0 30px rgba(61, 255, 176, .45);
+  --label-text: #021612;
+  --disc-sheen: conic-gradient(from 0deg, transparent 0 68%, rgba(140, 255, 215, .22) 84%, rgba(169, 139, 255, .12) 92%, transparent 100%);
+  --spin-time: 3s;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --display-weight: 700;
+  --display-leading: .98;
+  --display-transform: none;
+  --display-spacing: 0;
+  --brand-spacing: .02em;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+/* L'image : plein écran, voilée de nuit, plus dense vers le bas (paroles,
+   disque, boutons). Le haut reste clair : l'aurore danse derrière le titre. */
+.app { isolation: isolate; }
+.app::before {
+  content: ''; position: fixed; inset: -12px; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2, 8, 20, .3) 0%, rgba(2, 8, 20, .34) 22%, rgba(2, 8, 20, .5) 45%, rgba(2, 8, 20, .62) 70%, rgba(2, 8, 20, .7) 100%),
+    var(--skin-fond, var(--app-bg)) 50% 0 / cover no-repeat;
+  filter: blur(1px);
+}
+/* L'aurore vivante : des voiles de lumière floutés qui ondulent et
+   respirent par-dessus l'image, sans jamais passer devant l'interface. */
+.app::after {
+  content: ''; position: fixed; left: -25%; right: -25%; top: -6%; height: 60%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38% 26% at 28% 62%, rgba(61, 255, 176, .5), transparent 70%),
+    radial-gradient(30% 22% at 52% 74%, rgba(95, 230, 255, .35), transparent 70%),
+    radial-gradient(34% 24% at 74% 46%, rgba(169, 139, 255, .42), transparent 70%),
+    radial-gradient(24% 16% at 88% 30%, rgba(255, 142, 224, .3), transparent 70%);
+  filter: blur(36px); mix-blend-mode: screen; opacity: .55;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app::after { animation: aurore-sway 16s ease-in-out infinite alternate; }
+  @keyframes aurore-sway {
+    0% { transform: translateX(-5%) skewX(-8deg) scaleY(.92); opacity: .35; }
+    40% { opacity: .7; }
+    70% { transform: translateX(2%) skewX(3deg) scaleY(1.08); opacity: .5; }
+    100% { transform: translateX(6%) skewX(8deg) scaleY(1.15); opacity: .75; }
+  }
+  .now-title { animation: aurore-title 14s ease-in-out infinite alternate; }
+  @keyframes aurore-title { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+}
+
+.brand { color: #fff; }
+.brand span { background: var(--aurora); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.now-artist { color: var(--rose); font-family: var(--font-body); font-weight: 600; letter-spacing: .28em; text-shadow: 0 1px 8px rgba(2, 8, 20, .8); }
+/* Titre aux reflets glacés qui glissent lentement. */
+.now-title {
+  background: linear-gradient(100deg, #ffffff 0%, #d4fff1 25%, #bfefff 50%, #e2d6ff 75%, #ffffff 100%) 0 50% / 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 12px rgba(2, 8, 20, .85));
+}
+.now-meta { color: var(--text-dim); }
+.now-rating button { color: rgba(210, 245, 255, .22); }
+.now-rating button.on { color: var(--accent); text-shadow: 0 0 10px rgba(61, 255, 176, .7); }
+.needle { background: #fff; box-shadow: 0 0 0 2px rgba(3, 10, 22, .9), 0 0 14px var(--accent); height: 4px; border-radius: 2px; }
+.disc-label span { font: italic 700 17px var(--font-display); letter-spacing: .02em; }
+.disc-label i { background: #030a16; box-shadow: 0 0 0 1px rgba(170, 255, 235, .5); }
+
+.wheel-item { color: rgba(220, 242, 255, .78); }
+.wheel-item b { font-family: var(--font-body); font-weight: 600; letter-spacing: .01em; text-shadow: 0 1px 6px rgba(2, 8, 20, .9); }
+.wheel-item i { font-family: var(--font-body); font-weight: 500; letter-spacing: .14em; color: rgba(185, 170, 255, .75); }
+.wheel-item.is-front b { color: #fff; text-shadow: 0 0 14px rgba(61, 255, 176, .8), 0 1px 4px rgba(2, 8, 20, .9); }
+.wheel-item.is-front i { color: var(--accent-soft); }
+.wheel-item.is-current b { color: var(--accent); }
+.deck.is-filtering .wheel-item.is-match b { color: var(--rose); }
+
+/* Boutons de verre givré. */
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back {
+  background: rgba(5, 14, 28, .74); border: 1px solid rgba(160, 255, 230, .26); color: #d8f4ee;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.hub button[aria-pressed="true"] { background: var(--aurora); color: #021612; border-color: transparent; box-shadow: 0 0 24px rgba(61, 255, 176, .5); }
+.deck-sorts button[aria-pressed="true"] { background: linear-gradient(135deg, #a98bff, #ff8ee0); color: #12062a; border-color: transparent; }
+.deck-side .ib[aria-pressed="true"] { background: var(--accent); color: #021612; }
+.tabs button { font-family: var(--font-body); letter-spacing: .04em; }
+.tabs button[aria-selected="true"] { background: var(--aurora); color: #021612; box-shadow: 0 0 20px rgba(61, 255, 176, .35); }
+.lyrics p { color: rgba(220, 242, 255, .38); font-family: var(--font-body); font-weight: 500; text-shadow: 0 1px 8px rgba(2, 8, 20, .7); }
+.lyrics p.past { color: rgba(220, 242, 255, .55); }
+.lyrics.is-plain p { color: rgba(230, 251, 255, .85); }
+.lyrics p.on { color: #fff; font-family: var(--font-display); font-style: italic; font-weight: 700; text-shadow: 0 0 22px rgba(61, 255, 176, .55), 0 1px 6px rgba(2, 8, 20, .9); }
+.lyrics-tools { background: none; }
+.bar::before { background: rgba(210, 245, 255, .14); }
+.fill { box-shadow: 0 0 14px rgba(61, 255, 176, .6); }
+.play { color: #021612; box-shadow: 0 0 0 1px rgba(170, 255, 235, .6), 0 0 34px rgba(61, 255, 176, .5); }
+.btn.primary { background: var(--aurora); color: #021612; border-color: transparent; }
+.sheet { background: rgba(6, 16, 32, .97); border-top: 1px solid rgba(160, 255, 230, .3); box-shadow: 0 -16px 60px rgba(61, 255, 176, .12); }
+.sheet-head h2 { font-style: italic; color: #fff; text-transform: none; }
+.sheet::backdrop { background: rgba(1, 4, 12, .55); }
+.toast { background: rgba(7, 20, 38, .96); border: 1px solid rgba(160, 255, 230, .3); box-shadow: 0 10px 40px rgba(61, 255, 176, .15); }
+.avatar-ring span { color: var(--accent); }
+
+@media (max-width: 959px) {
+  .deck { border-top: 1px solid rgba(160, 255, 230, .2); background: rgba(2, 8, 20, .22); }
+}
+@media (min-width: 960px) {
+  /* PC : l'image est très agrandie ; on cadre l'aurore et les crêtes. */
+  .app::before {
+    background:
+      linear-gradient(90deg, rgba(2, 8, 20, .45), rgba(2, 8, 20, .55) 55%, rgba(2, 8, 20, .7)),
+      var(--skin-fond, var(--app-bg)) 50% 32% / cover no-repeat;
+    filter: blur(2px);
+  }
+  .app::after { height: 75%; }
+  .transport { border-top: 1px solid rgba(160, 255, 230, .2); background: rgba(3, 10, 22, .9); }
+}

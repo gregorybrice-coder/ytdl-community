@@ -1,0 +1,451 @@
+/* Shared music interface. Playback and account behavior stay in their existing controllers. */
+/* Palette déplacée dans le :root de capture.php (chargé avant ce fichier) —
+   les skins (voir data-skin) y sont aussi définis, un seul endroit à jour. */
+body.music-app,body.music-login{font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+body.music-app{display:block;padding:0 0 60px 232px}body.music-app::before,body.music-login::before,.music-app>.card::before,.music-login>.card::before{display:none}
+button,input{font:inherit}button,a,input{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,[role=button]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.music-skip{position:fixed;top:-100px;left:250px;z-index:400;background:var(--accent);color:var(--on-accent);padding:12px}.music-skip:focus{top:12px}
+.music-app>.card{max-width:1580px;width:100%;margin:auto;border:0;border-radius:0;background:radial-gradient(ellipse at 90% 0,rgba(var(--accent-rgb),0.08),transparent 36%),var(--surface-2);box-shadow:none;backdrop-filter:none;padding:30px clamp(24px,3.4vw,64px) 60px;min-height:100vh}
+.music-sidebar{position:fixed;inset:0 auto 0 0;width:232px;padding:38px 22px 130px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:40}
+.music-brand{font-size:36px;font-weight:700;letter-spacing:-2px;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:8px}.music-brand>span:first-child{color:var(--accent);font-size:42px}.music-brand-dot{color:var(--accent);margin-left:-8px}.music-nav-label{font-size:10px;letter-spacing:2px;color:var(--text-dim);margin:56px 12px 18px}.music-sidebar nav{display:grid;gap:8px}.music-nav{display:flex;align-items:center;gap:14px;border:0;border-radius:8px;padding:14px;background:transparent;color:var(--text-dim);text-align:left;cursor:pointer;font-size:13px;font-weight:600}.music-nav>span{font-size:23px;width:22px;text-align:center}.music-nav:hover{background:rgba(var(--overlay-rgb),0.03);color:var(--text)}.music-nav.active{background:rgba(var(--accent-rgb),0.09);color:var(--accent-2)}.music-sidebar-bottom{margin-top:auto;padding-top:30px}.music-sidebar-note{border-top:1px solid var(--border);padding:22px 12px 10px}.music-sidebar-note>span{font-size:14px;font-weight:600}.music-sidebar-note p{font-size:12px;line-height:1.8;color:var(--text-dim)}.music-add{background:var(--chip-bg);color:var(--accent-2);border:1px solid rgba(var(--accent-rgb),0.19);border-radius:8px;padding:13px;width:100%;font-size:12px;cursor:pointer}
+.music-app .top-bar{margin-bottom:32px}.music-app .logo-mark{display:none}.music-app .logo-lockup{margin:0}.music-app h1{font-size:19px;color:var(--text);background:none;letter-spacing:-.5px}.music-app .subtitle{font-size:11px;margin-top:5px}.music-app .user-btn{background:var(--chip-bg);border:1px solid var(--border);padding:5px 14px 5px 5px;gap:10px}.music-app .user-btn img{height:30px;width:30px;border-radius:50%}.music-app .user-dropdown{background:var(--chip-bg);z-index:65}
+.music-hero{position:relative;display:grid;grid-template-columns:1.2fr 1fr;min-height:320px;background:var(--hero-bg);color:var(--hero-heading);border-radius:14px;overflow:hidden;padding:40px 42px;gap:20px}.music-eyebrow{font-size:10px;letter-spacing:2px;font-weight:600;margin:0 0 20px}.music-hero h2{font-size:clamp(32px,3.5vw,58px);line-height:1.05;letter-spacing:-2.5px;margin:0 0 20px}.music-hero-copy>p:not(.music-eyebrow){font-size:13px;line-height:1.7;color:var(--hero-text)}.music-hero-play{border:0;border-radius:30px;background:var(--hero-cta-bg);color:var(--hero-cta-text);padding:14px 21px;font-size:12px;font-weight:600;cursor:pointer;margin-top:10px;display:inline-flex;gap:12px;align-items:center;transition:transform .2s}.music-hero-play:hover{transform:translateY(-2px);background:var(--hero-cta-bg-hover)}.music-art{position:relative;display:flex;align-items:center;justify-content:center;min-width:0}.music-art::before{content:'';position:absolute;width:230px;height:270px;background:#ea8d57;transform:rotate(-12deg);border:1px solid #68452c33;box-shadow:0 20px 25px #27352120}.music-disc{width:270px;aspect-ratio:1;border-radius:50%;position:relative;background:repeating-radial-gradient(circle,#242723 0px,#242723 1px,#111b16 2px,#111b16 4px);box-shadow:10px 16px 32px #142c2433;display:grid;place-items:center;transform:rotate(14deg)}.music-disc::after{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(transparent,rgba(var(--overlay-rgb),0.08),transparent 40%,#ffffff18,transparent 78%)}.music-disc-label{width:95px;aspect-ratio:1;background:#e78c56;border-radius:50%;text-align:center;padding-top:24px;font-size:24px;font-weight:700;color:#25221b;line-height:1.1;z-index:1}.music-disc-label small{font-size:5px;letter-spacing:1px}.music-art-caption{position:absolute;bottom:-18px;right:0;font-size:8px;letter-spacing:1.5px;font-weight:600}.music-art-caption span{opacity:.55;margin-left:10px}
+.music-section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:15px;margin:32px 0 19px}.music-section-heading h2{font-size:21px;letter-spacing:-.7px;margin:0}.music-section-heading>span{font-size:11px;color:var(--text-dim)}.music-shelf-wrap{position:relative}.music-shelf{display:flex;gap:18px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding-left:2px;padding-bottom:2px;scrollbar-width:none;-ms-overflow-style:none}.music-shelf.no-snap{scroll-snap-type:none}.music-shelf-arrow{position:absolute;top:0;width:30px;height:148px;z-index:5;display:flex;align-items:center;justify-content:center;border:none;background:rgba(var(--overlay-rgb),.1);color:var(--text);font-size:22px;line-height:1;cursor:pointer;backdrop-filter:blur(3px);transition:background .15s,opacity .15s}.music-shelf-arrow:hover{background:rgba(var(--overlay-rgb),.2)}.music-shelf-arrow-prev{left:0;border-radius:0 8px 8px 0}.music-shelf-arrow-next{right:0;border-radius:8px 0 0 8px}.music-section-heading-title{display:flex;align-items:center;gap:6px}.music-shelf-reroll{border:none;background:transparent;color:var(--text-dim);font-size:16px;line-height:1;cursor:pointer;padding:2px;border-radius:6px;transition:transform .3s ease,color .15s,background .15s}.music-shelf-reroll:hover{color:var(--text);background:rgba(var(--overlay-rgb),.08)}.music-shelf::-webkit-scrollbar{display:none;height:0}.music-album{flex:0 0 148px;scroll-snap-align:start;min-width:0;background:transparent;border:0;padding:0;text-align:left;color:var(--text);cursor:pointer}.music-cover{aspect-ratio:1;position:relative;overflow:hidden;border-radius:9px;background:linear-gradient(135deg,#a95839,#453c64)}.music-cover img{height:100%;width:100%;object-fit:cover;transition:transform .3s}.music-play-icon{display:grid;place-items:center;position:absolute;bottom:9px;right:9px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:13px;box-shadow:0 3px 10px #0005;opacity:0;transform:translateY(6px);transition:.2s}.music-album:hover .music-play-icon,.music-album:focus-visible .music-play-icon,.music-album.playing .music-play-icon{opacity:1;transform:none}.music-album:hover img{transform:scale(1.04)}.music-album-title{display:block;font-size:12px;line-height:1.4;margin-top:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.music-album.playing .music-album-title{color:var(--accent)}.music-album-meta{display:block;color:var(--text-dim);font-size:10px;margin-top:4px}.music-shelf-empty-cta{flex:1 1 auto;width:100%;min-height:96px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--border);border-radius:12px;background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s,color .2s}.music-shelf-empty-cta:hover{border-color:var(--accent);color:var(--text)}
+.music-app .top-bar-actions{gap:18px}.music-app .storage-section{margin:0;border:0;padding:0;flex-shrink:1}.music-app .storage-section>.library-title{font-size:9px;margin-bottom:2px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}.music-app .storage-donut{width:28px;height:28px}.music-app .storage-widget{gap:10px}.music-app .storage-legend{display:flex;gap:12px;flex-wrap:wrap}.music-app .storage-legend-item{font-size:10px;white-space:nowrap}.music-app .toolbar-actions{gap:8px}.music-app .playlist-fab,.music-app .download-fab{border-radius:30px;width:auto;height:38px;padding:0 14px;display:flex;gap:8px;box-shadow:none;background:var(--chip-bg);color:var(--text);border:1px solid var(--border)}.music-app .playlist-fab:not(.search-fab)::after{content:'Playlists';font-size:11px}.music-app .search-fab{width:38px;padding:0;border-radius:50%}.music-app .download-fab{background:var(--accent);color:var(--on-accent)}.music-app .download-fab::after{content:'Ajouter';font-size:11px}.music-app .toolbar-actions svg{width:16px}
+.music-app .library-tabs{justify-content:flex-start;gap:8px;border-top:0;margin-top:22px;padding-top:0}.music-app .library-tab{padding:6px 6px 0 0;color:var(--text-dim)}.music-app .library-tab-count{font-size:11px}.music-app .library-tab-icon{width:38px;height:38px;background:var(--chip-bg);border:1px solid var(--border);color:var(--text)}.music-app .library-tab-icon svg{width:16px;height:16px}.music-app .library-tab.active{color:var(--text)}.music-app .library-tab.active .library-tab-icon{background:var(--accent);color:var(--on-accent);border-color:transparent}.music-app .library-sort-btn{width:38px;height:38px;background:var(--chip-bg);color:var(--text)}.music-app .library-sort-btn svg{width:18px;height:18px}.music-app .library-sort-btn.active{background:var(--accent);color:var(--on-accent);border-color:transparent}.music-app .library-section{margin-top:24px}.music-app .library-title{margin-bottom:16px}.music-app .library-title-text{font-size:12px}.music-app .library-list{gap:0}.music-app .library-item{padding:12px 8px;margin:0;border:0;border-bottom:1px solid rgba(var(--overlay-rgb),0.035);border-radius:4px;background:transparent;gap:18px}.music-app .library-item:hover{background:rgba(var(--overlay-rgb),0.024)}.music-app .library-item.playing{background:linear-gradient(100deg,var(--accent),var(--accent-2))}.music-app .library-item.playing .library-item-title{color:var(--on-accent);font-weight:700}.music-app .library-item.playing .library-download-btn{color:var(--on-accent)}.music-app .library-item.playing .library-download-btn:hover{background:rgba(0,0,0,.12)}.music-app .library-main{gap:16px}.music-app .library-thumb{width:48px;height:48px;border-radius:5px}.music-app .library-item-title{font-size:13px;font-weight:500}.music-app .library-play-icon{font-size:22px}.music-app .library-actions{gap:12px}.music-app .library-download-btn{color:var(--text-dim)}.music-app .library-lyrics-btn.lyrics-synced{color:var(--accent)}.music-app .library-empty{padding:48px 20px;background:rgba(var(--overlay-rgb),0.012);border:1px dashed rgba(var(--overlay-rgb),0.08);border-radius:12px;line-height:1.8}
+.music-app .mini-player{padding:16px 30px;background:rgba(var(--surface-2-rgb),0.96);backdrop-filter:blur(22px);border-top:1px solid var(--border);box-shadow:0 -10px 40px #0004;gap:20px}.music-app .mini-player-thumb{width:56px;height:56px;border-radius:8px}.music-app .mini-player-play{background:var(--btn-light-bg);color:var(--on-accent);border-radius:50%;width:44px;height:44px}.music-app .mini-player-title{font-size:13px}.music-app .mini-player-seek,.music-app .mini-player-volume{accent-color:var(--accent)}.music-app .mini-player-btn.toggle-active{color:var(--accent-2)}.music-app .resume-banner-btn.primary{color:var(--on-accent)}.music-app:has(.mini-player.visible){padding-bottom:132px}.music-app .resume-banner.mini-player-visible{bottom:125px}.music-app .playlist-import-mini.mini-player-visible{bottom:125px}.music-app .playlist-import-mini{background:var(--surface-2);box-shadow:0 10px 28px #0006}.music-app .playlist-import-mini-donut::after{background:var(--surface-2)}.music-app .playlist-import-mini-donut-inner::after{background:var(--surface-2)}.music-app .download-sheet,.music-app .sheet,.music-app .profile-drawer,.music-app .modal{background:var(--surface-2)}.music-app button.primary{background:var(--accent)}
+body.music-login{display:grid;grid-template-columns:1.1fr 1fr;align-items:center;min-height:100dvh;overflow:auto;gap:7vw;padding:50px 7vw}.music-login-story{position:relative;min-height:690px;display:flex;flex-direction:column;justify-content:space-between}.music-login-story h2{font-size:clamp(42px,4.8vw,76px);line-height:1.05;letter-spacing:-3px;margin:16px 0 22px}.music-login-story>div>p:not(.music-eyebrow){font-size:14px;line-height:1.8;color:var(--text-dim)}.music-login-story .music-eyebrow{color:var(--accent-2)}.music-login-record{position:relative;height:240px;overflow:hidden}.music-login-record .music-disc{width:330px;margin-left:40px}.music-login-foot{font-size:9px;letter-spacing:2px;color:var(--text-dim)}.music-login>.card{max-width:510px;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px #0002;padding:38px;backdrop-filter:none}.music-login h1{font-size:34px;letter-spacing:-1.5px;background:none;color:var(--text);margin-bottom:14px}.music-login .subtitle{font-size:13px;line-height:1.8;margin-bottom:28px}.music-login .accounts{gap:12px}.music-login .account-btn,.music-login .add-btn{background:var(--chip-bg);border:1px solid var(--border);width:112px;padding:19px 12px;border-radius:12px}.music-login .account-btn img{height:68px;width:68px;border-radius:50%;object-fit:cover}.music-login .account-btn:hover{border-color:var(--accent);box-shadow:none}.music-login .remember-row{justify-content:flex-start;margin-bottom:28px}.music-login .remember-row label{font-size:12px}.music-login input[type=text],.music-login input[type=email]{background:var(--surface-2)}.music-login button.submit{background:var(--accent);box-shadow:none}
+@media(min-width:1600px){.music-hero{min-height:380px}.music-art .music-disc{width:320px}}
+@media(max-width:1150px){body.music-app{padding-left:190px}.music-sidebar{width:190px;padding-inline:14px}.music-hero{padding:30px;grid-template-columns:1.3fr 1fr}.music-art .music-disc{width:210px}.music-art::before{width:165px;height:210px}.music-shelf{gap:13px}.music-album{flex-basis:128px}.music-shelf-arrow{height:128px}.music-app .storage-legend{gap:6px}.music-app .mini-player{gap:12px}}
+@media(max-width:760px){body.music-app{padding:0 0 40px}.music-sidebar{display:none}.music-app>.card{padding:20px}.music-app .top-bar{margin-bottom:22px}.music-hero{padding:26px;min-height:290px;grid-template-columns:1fr .55fr;gap:8px}.music-hero h2{font-size:36px;letter-spacing:-1.8px}.music-eyebrow{font-size:8px;letter-spacing:1.3px;line-height:1.6}.music-hero-copy>p:not(.music-eyebrow){font-size:12px}.music-art .music-disc{width:180px;flex-shrink:0;margin-right:-80px}.music-art::before{width:140px;height:180px;right:-45px}.music-disc-label{width:70px;font-size:18px;padding-top:18px}.music-art-caption{display:none}.music-section-heading>span{display:none}#music-recent .music-section-heading>span{display:block;font-size:10px;margin-top:2px}.music-section-heading h2{font-size:20px}.music-shelf{gap:10px}.music-album{flex-basis:108px}.music-shelf-arrow{height:108px;width:26px;font-size:18px}.music-app .top-bar-actions{gap:10px}.music-app .storage-section>.library-title,.music-app .storage-legend{display:none}.music-app .storage-donut{width:24px;height:24px}.music-app .library-tabs{flex-wrap:nowrap;gap:1px;top:0;background:var(--surface-2)}.music-app .library-tab{padding:6px 2px 0 0}.music-app .library-tab-count{font-size:10px;min-width:16px;padding:0 4px}.music-app .library-tab-icon{width:36px;height:36px}.music-app .library-sort-group{margin-left:2px;gap:1px}.music-app .library-sort-btn{width:36px;height:36px}.music-app .toolbar-actions{gap:4px}.music-app .playlist-fab,.music-app .download-fab{width:36px;height:36px;padding:0;border-radius:50%}.music-app .playlist-fab:not(.search-fab)::after,.music-app .download-fab::after{content:none}.music-app .library-main{flex-basis:100%;gap:12px}.music-app .library-actions{flex-basis:100%;justify-content:flex-start;gap:6px;padding-top:2px}.music-app .library-item{gap:5px;padding:10px 4px}.music-app .library-thumb{width:44px;height:44px}.music-app .library-download-btn{padding:7px;min-height:32px}.music-app .library-item-title{font-size:12px}.music-app .mini-player{flex-wrap:wrap;padding:10px 14px;gap:7px}.music-app .mini-player-row-top{display:flex;align-items:center;width:100%;gap:8px}.music-app .mini-player-thumb{width:42px;height:42px}.music-app .mini-player-btn{width:32px;height:32px}.music-app .mini-player-play{width:38px;height:38px}.music-app:has(.mini-player.visible){padding-bottom:175px}.music-app .resume-banner.mini-player-visible{bottom:164px}.music-skip{left:20px}body.music-login{display:block;padding:32px 20px}.music-login-story{min-height:0;margin-bottom:30px}.music-login-story .music-brand{font-size:28px;margin-bottom:34px}.music-login-story h2{font-size:40px;letter-spacing:-2px}.music-login-record,.music-login-foot{display:none}.music-login>.card{max-width:none;padding:28px}.music-login-story>div>p:not(.music-eyebrow){font-size:13px}}
+@media(max-width:390px){.music-hero{grid-template-columns:1fr;padding:24px}.music-art{display:none}.music-app>.card{padding:16px}.music-app .playlist-fab::after{display:none}.music-login>.card{padding:22px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+.music-app .mini-star{color:var(--text-dim)}.music-app .mini-star.filled,.music-app .mini-star.active{color:var(--accent-2)}
+@media(max-width:760px){.music-app .mini-player-volume{width:46px}.music-app .mini-player-volume-wrap{gap:3px}}
+@media(max-width:390px){.music-hero h2{font-size:32px}.music-hero{min-height:0}.music-hero-copy>p:not(.music-eyebrow) br{display:none}}
+
+/* Même supplément que le padding-top ajouté à .library-tabs plus bas dans ce
+   fichier (voir son commentaire) : sans lui, un saut vers cette ancre
+   replacerait la barre sous ce padding, comme avant son ajout. */
+@media(max-width:760px){#library-tabs{scroll-margin-top:calc(82px + 22px + env(safe-area-inset-top))}}
+
+/* Keep clip navigation readable and reachable on phones, including landscape. */
+@media(max-width:760px), (max-height:500px) and (pointer:coarse){
+ .music-app .video-modal-overlay{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));overflow-y:auto}
+ .music-app .video-modal-header{flex-wrap:wrap;gap:12px}
+ .music-app .video-modal-title{flex-basis:100%}
+ .music-app .video-modal-actions{width:100%;gap:8px}
+ .music-app .video-modal-btn{min-width:44px;height:44px}
+ .music-app #video-prev-btn,.music-app #video-next-btn{flex:1;width:auto;gap:7px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600}
+ .music-app #video-prev-btn::after{content:'Précédent'}
+ .music-app #video-next-btn::after{content:'Suivant'}
+ .music-app #video-player{max-height:calc(100dvh - 135px)}
+}
+.music-app .video-modal-overlay:fullscreen{background:#000}
+
+/* Overlay controls do not reserve space over the fullscreen video. */
+.music-app .video-modal-header{transition:opacity .2s ease}
+.music-app .video-controls-hidden .video-modal-header{opacity:0;pointer-events:none}
+.music-app:has(.video-modal-overlay.visible.video-immersive){overflow:hidden}
+.music-app .video-modal-overlay.video-immersive{padding:0;overflow:hidden;background:#000;width:100%;height:100dvh}
+.music-app .video-immersive .video-modal{max-width:none;width:100%;height:100%;transform:none!important}
+.music-app .video-immersive #video-player{width:100%;height:100%;max-height:none;object-fit:contain;border-radius:0}
+.music-app .video-immersive #video-player::-webkit-media-controls-timeline,.music-app .video-immersive #video-player::-webkit-media-controls-current-time-display,.music-app .video-immersive #video-player::-webkit-media-controls-time-remaining-display{display:none!important}
+.music-app .video-immersive .video-modal-header{position:absolute;z-index:2;top:0;left:0;right:0;margin:0;padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 24px max(16px,env(safe-area-inset-left));background:linear-gradient(#000c,#0008,transparent);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;pointer-events:none}
+.video-immersive .video-modal-header-main,.video-immersive .video-modal-actions{pointer-events:auto}
+.music-app .video-immersive .video-modal-header-main{grid-column:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.music-app .video-immersive .video-timeline{display:flex}
+.music-app .video-immersive .video-modal-actions{grid-column:2;justify-self:center}
+/* Paroles incrustées en bas (même principe que l'en-tête ci-dessus, miroir
+   vertical) : le plein écran ici met toute la modale en fullscreen — pas la
+   balise <video> seule — rien n'empêche donc cette incrustation HTML. */
+/* 35vh -> 18vh : sur un grand écran PC en plein écran, 35vh affichait
+   jusqu'à 16 lignes d'un coup (bien plus que nécessaire pour suivre le
+   morceau) — 18vh en montre la moitié environ, le reste restant atteignable
+   au scroll (voir overscroll-behavior). */
+.music-app .video-immersive .video-lyrics-bar{display:block!important;position:absolute;z-index:2;left:0;right:0;bottom:0;margin:0;border-radius:0;max-height:18vh;background:linear-gradient(transparent,#000c 40%,#000e);padding:24px max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));opacity:0;pointer-events:none;transition:opacity .2s ease}
+.music-app .video-immersive .video-lyrics-bar.visible{opacity:1;pointer-events:auto}
+.music-app .video-immersive .video-artist-bar{display:none!important}
+/* Le réglage de décalage doit rester atteignable en plein écran immersif :
+   un clip s'y lance directement (voir playVideo), c'est donc là qu'on
+   constate le décalage et qu'on veut le corriger. Incrusté sous l'en-tête
+   plutôt qu'en bas, où les paroles occupent déjà le champ, et masqué avec
+   les autres contrôles pour ne pas rester en travers de l'image. */
+.music-app .video-immersive .video-lyrics-offset-row{position:absolute;z-index:3;top:calc(max(14px,env(safe-area-inset-top)) + 46px);left:50%;transform:translateX(-50%);margin:0;width:max-content;max-width:calc(100% - 32px);background:#000c;backdrop-filter:blur(4px);transition:opacity .2s ease;pointer-events:none}
+.video-immersive .video-lyrics-offset-row>*{pointer-events:auto}
+.music-app .video-controls-hidden .video-lyrics-offset-row{opacity:0;pointer-events:none}
+/* ...sauf pendant une saisie : le champ ne doit jamais s'effacer sous les
+   doigts parce que les deux secondes d'inactivité sont écoulées. */
+.music-app .video-controls-hidden .video-lyrics-offset-row:focus-within{opacity:1;pointer-events:auto}
+.music-app #video-player::-webkit-media-controls-fullscreen-button{display:none}
+
+/* Landscape presentation also works when mobile orientation locking is unavailable. */
+@media(orientation:portrait){
+ .music-app .video-immersive .video-modal{position:absolute;left:50%;top:50%;width:100dvh;height:100dvw;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center}
+ .music-app .video-immersive #video-prev-btn,.music-app .video-immersive #video-next-btn{padding-inline:12px;flex:none}
+}
+
+/* Compact clip navigation; accessible names remain on the buttons. */
+.music-app #video-prev-btn,.music-app #video-next-btn{flex:none;width:36px;min-width:36px;height:36px;padding:8px;gap:0;border-radius:8px}
+.music-app #video-prev-btn::after,.music-app #video-next-btn::after{content:none}
+.music-app #video-prev-btn svg,.music-app #video-next-btn svg{width:18px;height:18px}
+@media(orientation:portrait){.music-app .video-immersive #video-prev-btn,.music-app .video-immersive #video-next-btn{padding:8px}}
+
+/* Zoom au survol d'un titre de "Playlist au hasard" — uniquement sur un
+   appareil à pointeur précis avec vrai survol (souris/trackpad) : sur
+   tactile, :hover reste "collé" après un tap et n'a de toute façon aucun
+   sens sans curseur, d'où l'exclusion via (hover:hover) et (pointer:fine)
+   plutôt qu'un simple :hover global. transform seul (jamais width/height),
+   pour ne jamais perturber la mise en page flex du bandeau.
+   Le bandeau lui-même a besoin d'un peu de marge verticale en plus (voir
+   .music-shelf ci-dessous) : overflow-x:auto force overflow-y à devenir
+   "auto" lui aussi (impossible de mélanger visible et auto sur les deux
+   axes), donc sans cette marge la carte agrandie serait purement et
+   simplement coupée en haut/en bas par le cadre du bandeau, au lieu de
+   déborder par-dessus ses voisines comme prévu. */
+@media (hover: hover) and (pointer: fine) {
+  .music-shelf{padding-top:56px;padding-bottom:56px;margin-top:-56px;margin-bottom:-56px}
+  /* Les flèches se calent sur .music-shelf-wrap (même boîte que .music-shelf,
+     donc avec ce padding-top de 56px inclus) — sans ce même décalage ici,
+     elles restaient 56px plus haut que les vignettes réelles, chevauchant le
+     titre "Playlist au hasard" au lieu du bandeau. Uniquement dans ce bloc :
+     au doigt, .music-shelf n'a pas ce padding, donc pas besoin du décalage. */
+  .music-shelf-arrow{top:56px}
+  /* Le margin-top négatif ci-dessus fait remonter .music-shelf par-dessus le
+     titre "Playlist au hasard" (même largeur, même position horizontale) :
+     étant après lui dans le DOM, il passe au-dessus au rendu et capte les
+     clics destinés au dé, qui semblait donc "ne rien faire". On repasse le
+     titre devant avec un contexte d'empilement dédié. */
+  .music-section-heading{position:relative;z-index:6}
+  .music-album{transition:transform .2s ease;transform-origin:center center;position:relative}
+  .music-album:hover{transform:scale(1.5);z-index:5}
+  @media(prefers-reduced-motion:reduce){.music-album{transition:none}.music-album:hover{transform:none}}
+}
+
+/* Icône paroles synchronisées sur la piste en cours de lecture (fond orange
+   dégradé) : blanc plutôt que noir, pour rester un vrai signal "paroles
+   dispo" distinct du reste des icônes forcées en noir sur ce fond — sans
+   cette règle, plus spécifique que .library-item.playing .library-download-btn
+   ci-dessus (4 classes) et que .library-lyrics-btn.lyrics-synced tout court
+   (2 classes), l'une des deux écrasait l'autre selon l'ordre des feuilles. */
+.music-app .library-item.playing .library-lyrics-btn.lyrics-synced { color: #fff; }
+
+/* Une ligne "search-hidden" (recherche bibliothèque, capture.php) doit
+   vraiment disparaître (hauteur nulle) pour que le résultat trouvé remonte
+   juste sous le champ de recherche — sans cette règle, la déclaration
+   .library-item ci-dessus (padding + bordure inconditionnels) l'emporte sur
+   la tentative de réduction à zéro et laisse ~25px résiduels par ligne
+   masquée, ce qui pousse le résultat loin dans la page sur une grosse
+   bibliothèque. */
+.music-app .library-item.search-hidden { padding: 0; border-width: 0; margin-bottom: 0; }
+
+/* Infobulle générique de la sidebar (capture.php), pour un mot isolé (ex.
+   "Stockage" sur le donut — jamais retenue pour un texte plus long comme
+   l'ancienne légende détaillée, qu'une modale au clic explique mieux) :
+   posée à droite de l'élément, jamais au-dessus/dessous (la sidebar est
+   collée au bord gauche). */
+.sidebar-tooltip { position: relative; }
+.sidebar-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute; left: calc(100% + 10px); top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  background: var(--text); color: var(--bg); padding: 7px 11px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 50;
+}
+.sidebar-tooltip:hover::after, .sidebar-tooltip:focus-visible::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+/* Avatar (+ nom) et bandeau de stockage, déplacés du header vers la sidebar
+   à la place de l'ancien bouton "Mon profil" — désormais côte à côte sur une
+   même rangée plutôt qu'empilés : le donut a besoin de bien moins de place
+   en largeur que de hauteur, autant lui laisser partager la ligne de
+   l'avatar plutôt que d'occuper une ligne entière à lui seul. */
+.music-sidebar .sidebar-profile-row { display: flex; align-items: center; gap: 6px; margin-bottom: 18px; }
+.music-sidebar .sidebar-profile-row .sidebar-user-menu { flex: 1; min-width: 0; }
+.music-sidebar .sidebar-user-menu .user-btn { width: 100%; justify-content: flex-start; background: transparent; border: none; border-radius: 8px; padding: 8px; gap: 10px; font-size: 13px; font-weight: 600; color: var(--text-dim); }
+.music-sidebar .sidebar-user-menu .user-btn:hover { background: rgba(var(--overlay-rgb),0.03); color: var(--text); }
+.music-sidebar .sidebar-user-menu .user-btn img { width: 30px; height: 45px; border-radius: 6px; flex-shrink: 0; }
+/* Le nom peut dépasser la place laissée par le donut à sa droite — tronqué
+   plutôt que de repousser/écraser ce dernier. */
+.music-sidebar .sidebar-user-menu .user-btn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.music-sidebar .sidebar-user-menu .user-dropdown { left: 0; right: auto; top: calc(100% + 4px); }
+
+/* flex:1 (règle de base, pensée pour se répartir la largeur dans la rangée
+   horizontale .top-bar-actions) survivait mal une fois réutilisé dans une
+   AUTRE rangée flex (.sidebar-profile-row ci-dessus) : il grandissait pour
+   revendiquer tout l'espace restant au lieu de garder la taille de son
+   contenu (le donut). flex:none le fige à sa taille naturelle. Le libellé
+   "Stockage" reste masqué (voir .sidebar-tooltip juste au-dessus) ; seule la
+   modale ouverte au clic (voir openStorageModal) détaille par catégorie. */
+.music-sidebar .sidebar-storage-section { flex: none; margin: 0; padding: 6px; border-radius: 8px; }
+.music-sidebar .sidebar-storage-section:hover { background: rgba(var(--overlay-rgb),0.03); }
+.music-sidebar .sidebar-storage-section .library-title,
+.music-sidebar .sidebar-storage-section .storage-legend { display: none; }
+.music-sidebar .sidebar-storage-section .storage-donut { width: 34px; height: 34px; }
+
+/* Rangée mobile (capture.php, .mobile-top-bar-row) : nom de l'app + espace
+   disque dispo + avatar, doublons de ceux de la sidebar — cette rangée ne
+   sert QUE sous 760px, là où .music-sidebar (qui porte déjà les siens) est
+   masquée ; au-delà, elle serait redondante, donc masquée par défaut ici. */
+.mobile-top-bar-row { display: none; }
+@media (max-width: 760px) {
+  .mobile-top-bar-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+}
+.mobile-brand { font-size: 22px; margin-right: auto; }
+.mobile-storage-section { padding: 4px; border-radius: 8px; }
+.mobile-storage-section:hover { background: rgba(var(--overlay-rgb),0.05); }
+.mobile-storage-section .storage-donut { width: 26px; height: 26px; }
+
+/* La barre d'action de la bibliothèque (recherche/Audio/Clips/tri/ajout,
+   voir .library-tabs) reste collée au scroll (position:sticky, top:0 plus
+   haut dans ce fichier) — capture d'écran à l'appui, un simple décalage de
+   top (4px, puis même env(safe-area-inset-top) pour une encoche iOS) ne
+   suffisait toujours pas : ça ne fait que DÉPLACER la frontière entre "zone
+   couverte par la barre" et "zone où les lignes défilent encore" — les
+   icônes touchent alors ce nouveau bord à leur tour, ou (si on recule) 1-2
+   lignes de titres redeviennent visibles AU-DESSUS des icônes pendant la
+   transition du sticky. La vraie correction : agrandir la barre elle-même
+   vers le haut (padding-top, fond opaque déjà posé sur .library-tabs) —
+   les icônes se retrouvent posées plus bas DANS la barre, jamais collées à
+   son bord, et cette zone ajoutée est opaque : plus aucune ligne ne peut
+   défiler visible au travers, quel que soit l'instant du scroll. */
+@media (max-width: 760px) {
+  .music-app .library-tabs { top: 0; padding-top: calc(22px + env(safe-area-inset-top)); }
+}
+
+/* Titre en avant (plus gros), artiste en second (plus petit, à la ligne
+   suivante) sur mobile — desktop garde la même ligne unique "Artiste —
+   Titre" qu'avant (voir capture.php, renderLibraryItemTitle : ce sont 3
+   <span> inline par défaut, qui s'enchaînent donc naturellement). order:-1
+   fait passer .library-item-title-text (dernier du DOM) EN PREMIER une fois
+   la colonne activée, sans changer l'ordre du DOM lui-même (recherche/
+   accessibilité continuent de lire "Artiste puis Titre"). */
+@media (max-width: 760px) {
+  /* Flex "blockifie" ses enfants même laissés display:inline (voir spec) —
+     l'ellipsis individuelle ne marche donc qu'ICI, pas besoin d'y toucher
+     pour le desktop qui, lui, laisse le débordement/l'ellipsis existants de
+     .library-item-title (le conteneur) gérer toute la ligne combinée. */
+  .music-app .library-item-title { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .music-app .library-item-title-sep { display: none; }
+  .music-app .library-item-title-text, .music-app .library-item-artist {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+  /* Artiste devant (plus gros, bien contrasté) puis titre en second (plus
+     petit, atténué) — l'inverse de l'essai précédent. Aucun order:-1 requis
+     cette fois : l'artiste est déjà EN PREMIER dans le DOM (voir les 3
+     <span>, capture.php) — order ne servait qu'à faire passer le titre
+     devant quand c'était lui le mis en avant. */
+  .music-app .library-item-artist { font-size: 15px; font-weight: 700; color: var(--text); }
+  .music-app .library-item-title-text { font-size: 12px; font-weight: 500; color: var(--text-dim); }
+  /* Icône de renommage (admin) à droite du titre — voir .library-title-row/
+     .library-mobile-rename-btn (capture.php) : sur desktop, ce sont de
+     simples display:contents/none, l'action de renommage y passe par
+     .library-rename-btn dans .library-actions à la place (renommage en
+     place, jamais cette icône-ci). */
+  .music-app .library-title-row { display: flex; align-items: center; gap: 6px; }
+  .music-app .library-item-title { flex: 1; min-width: 0; }
+  .music-app .library-mobile-rename-btn {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 28px; height: 28px; border-radius: 8px; border: none; padding: 0;
+    background: rgba(var(--overlay-rgb),0.08); color: var(--text-dim);
+  }
+  /* .library-actions{flex-basis:100%} (voir plus bas) affiche toute la
+     rangée d'actions sous la ligne titre/miniature sur mobile — sans ça,
+     .library-rename-btn (desktop, renommage en place) s'y retrouve visible
+     en double avec .library-mobile-rename-btn ci-dessus, qui est déjà LE
+     bouton de renommage mobile. */
+  .music-app .library-rename-btn { display: none; }
+}
+
+/* Étoiles du mini-lecteur retirées SUR MOBILE seulement — desktop les garde
+   (encore le seul moyen d'y noter la piste en cours ; sur mobile, chaque
+   ligne a désormais son propre "★" dans le panneau de glissement, voir
+   setupSwipeToDelete/openRatingModal, donc plus besoin de les dupliquer
+   ici). display:none réduit d'autant la hauteur du mini-lecteur mobile,
+   jugée un peu trop haute. Le HTML/JS (miniStars, currentTrackRating…)
+   reste intact : rien ne change pour la souris/desktop. */
+@media (max-width: 760px) {
+  .music-app .mini-player-rating { display: none; }
+}
+
+/* Skin Kawaii, mobile : la ligne secondaire (.library-item-title-text — le
+   titre, l'artiste étant repassé devant, voir plus haut) en --text-dim
+   (#b088a8 côté Kawaii, un rose pâle) se distinguait mal du fond clair de
+   la ligne — remonté à --text (la même teinte foncée que l'artiste,
+   #5c3a52) ; la hiérarchie visuelle artiste/titre repose sur la taille et
+   le poids de police (voir plus haut), pas sur un ton plus pâle qui devient
+   illisible ici. Propre à Kawaii (fond très clair) : les autres skins,
+   bien plus sombres, n'ont pas ce souci de contraste pour cette ligne. */
+@media (max-width: 760px) {
+  [data-skin="kawaii"] .music-app .library-item-title-text { color: var(--text); }
+}
+
+/* Titre en lecture ("playing", fond plein --accent/--accent-2), mobile —
+   .library-item-artist/.library-item-title-text portent une couleur EXPLICITE
+   (--text/--text-dim, voir plus haut), qui prime donc sur l'héritage depuis
+   .library-item.playing .library-item-title { color: var(--on-accent) }
+   (capture.php). Même souci sur Sombre (--text-dim clair, illisible sur le
+   fond orange), Clair (--text-dim sombre, illisible sur le fond orange) et
+   Ambre (--text-dim beige grisé, illisible sur le fond orange) — --on-accent
+   est déjà la couleur pensée pour CE contraste précis dans chaque skin
+   (quasi noir en Sombre, quasi blanc en Clair, quasi noir en Ambre) : pas
+   besoin de couleurs à part, juste de la faire gagner ici. Kawaii non
+   listé : --on-accent y vaut déjà --text (voir plus haut), donc déjà bon
+   sans règle dédiée. */
+@media (max-width: 760px) {
+  [data-skin="sombre"] .music-app .library-item.playing .library-item-artist,
+  [data-skin="sombre"] .music-app .library-item.playing .library-item-title-text,
+  html:not([data-skin]) .music-app .library-item.playing .library-item-artist,
+  html:not([data-skin]) .music-app .library-item.playing .library-item-title-text,
+  [data-skin="clair"] .music-app .library-item.playing .library-item-artist,
+  [data-skin="clair"] .music-app .library-item.playing .library-item-title-text,
+  [data-skin="ambre"] .music-app .library-item.playing .library-item-artist,
+  [data-skin="ambre"] .music-app .library-item.playing .library-item-title-text { color: var(--on-accent); }
+}
+
+/* Zébrage (une ligne sur deux) : passé d'un voile transparent
+   (rgba(var(--overlay-rgb),X), jamais assez tranché quel que soit X) à une
+   vraie couleur solide (--surface, voir capture.php et la règle
+   .music-app .library-item:nth-child(even) plus haut dans ce fichier) —
+   plus de scoping mobile/Kawaii nécessaire, --surface est déjà pensée pour
+   trancher avec le fond de la carte dans chaque skin. */
+
+/* Skin Kawaii, footer (mini-lecteur) : lecture aléatoire/enchaînement/fondu
+   actifs passaient inaperçus — inactif (.mini-player-shuffle etc, --text-dim
+   = #b088a8, un rose pâle) et actif (.toggle-active, --accent-2 = #b39ddb,
+   un lavande pâle) sont deux pastels de luminosité quasi identique, sans
+   assez d'écart pour distinguer l'état au premier coup d'œil. --success
+   (#7bc99a, vert) tranche nettement avec ces deux tons ET avec le fond rose
+   du mini-lecteur — pas de restriction mobile ici, le footer existe aussi
+   sur desktop et le problème de contraste n'a rien à voir avec la largeur
+   d'écran. */
+[data-skin="kawaii"] .music-app .mini-player-btn.toggle-active,
+[data-skin="kawaii"] .music-app .mini-player-settings-row.toggle-active { color: var(--success); }
+
+/* Réorganisation du footer mobile (mini-lecteur) : la vignette (+ prev/
+   next/lecture, voir .mini-player-center-cluster) VRAIMENT au centre du
+   footer, pas juste poussée à droite par une ligne de temps qui prendrait
+   tout l'espace restant à elle seule — technique classique de centrage
+   flex à 3 zones : la ligne de temps (.mini-player-body) ET le volume
+   (.mini-player-volume-wrap) reçoivent le MÊME flex-grow (1) de part et
+   d'autre du groupe central (flex:0, taille fixe) — quel que soit leur
+   contenu, l'espace restant se répartit à égalité entre les deux, ce qui
+   centre mathématiquement tout ce qu'il y a entre eux. Les deux sont aussi
+   réduits (basis 0) : la ligne de temps comme demandé, et le volume parce
+   qu'il devient vertical (voir plus bas) — un curseur vertical n'a besoin
+   que d'une poignée de pixels de large, pas de la largeur d'un curseur
+   horizontal. Le titre défilant (.mini-player-title) disparaît : il fait
+   déjà double emploi avec la ligne surlignée dans la bibliothèque/
+   playlist, qui se recentre elle-même après un temps d'inactivité (voir
+   scheduleAutoFocusPlaying, AUTO_FOCUS_IDLE_MS) — inutile de le répéter ici
+   au prix d'une ligne de plus. */
+@media (max-width: 760px) {
+  .music-app .mini-player-title { display: none; }
+  /* Aéré un peu plus (6px → 12px) maintenant que le volume ET la croix de
+     fermeture disparaissent par défaut (voir plus bas) — de la place en
+     plus entre les groupes de boutons restants sans risquer de déborder
+     sur une seconde ligne (vérifié avec le volume réaffiché en option,
+     voir .show-mobile-volume ci-dessous, ça tient toujours). */
+  .music-app .mini-player-row-top { gap: 12px; }
+  .music-app .mini-player-body { order: 1; flex: 1 1 0; min-width: 70px; }
+  .music-app .mini-player-center-cluster { order: 2; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  /* Paroles/options : rejoignent la ligne unique du footer, juste avant le
+     volume (voir HTML — .mini-player-row-bottom n'existe plus, lecteur
+     simplifié à l'extrême ET footer sur une seule ligne, moins haut). Le
+     order:3 explicite ici bat le order:10/11 posé par capture.php (même
+     spécificité par sélecteur #id — cette règle gagne en étant chargée
+     après) ; specifique au mobile, le desktop garde son 10/11/12 inchangé. */
+  #mini-player-lyrics-btn, #mini-player-settings-btn { order: 3; }
+  /* Croix de fermeture superflue sur mobile : le bouton pause du lecteur
+     suffit à arrêter la lecture (voir mini-player-play), garder les deux
+     n'ajoutait qu'une icône de plus à lire. Reste disponible sur desktop
+     (aucun display:none hors de ce media). */
+  .music-app #mini-player-close { display: none; }
+  /* Volume masqué par défaut sur mobile : le bouton matériel du téléphone
+     suffit, inutile de dupliquer ce réglage dans le footer. Laissé en
+     option pour qui préfère quand même un curseur dans l'appli — voir
+     #mini-player-show-volume/showMobileVolume (capture.php), qui bascule
+     .show-mobile-volume sur <body>. Uniquement l'instance du footer
+     (.mini-player-row-top), jamais celle de la feuille de paroles
+     (#lyrics-volume-wrap, ailleurs dans le DOM, non concernée). */
+  /* order:1, à égalité avec .mini-player-body (juste au-dessus) : l'ordre
+     source décide alors entre les deux (body d'abord, volume ensuite) — ce
+     qui place le volume juste après le bloc barre de progression/durée
+     (#mini-player-time-mobile, DANS .mini-player-body), avant le groupe
+     centré (vignette/transport, order:2). Demandé explicitement : le
+     volume doit être visuellement "à côté" de la durée du morceau. */
+  .music-app .mini-player-row-top .mini-player-volume-wrap { display: none; order: 1; flex: 0 0 auto; }
+  /* .music-app ET .show-mobile-volume sont sur le MÊME <body> (pas l'un
+     ancêtre de l'autre) — sélecteur composé, pas de descendant combinator
+     entre les deux. */
+  body.music-app.show-mobile-volume .mini-player-row-top .mini-player-volume-wrap { display: flex; }
+  /* Curseur de volume vertical : -webkit-appearance:slider-vertical inverse
+     width/height (la largeur devient l'épaisseur du curseur, la hauteur sa
+     longueur) — pris en charge par les navigateurs WebKit/Blink (Chrome et
+     Safari, donc Android/iOS), largement suffisant pour cette appli.
+     Icône à DROITE de la barre (pas au-dessus) : en colonne, l'icône et son
+     espacement rognaient sur la hauteur dispo pour le curseur lui-même —
+     en ligne, la barre profite de toute la hauteur du footer, plus précise
+     à régler du pouce. order inversé (curseur avant l'icône) : ce sont
+     l'icône puis le curseur dans le HTML (partagé avec la feuille de
+     paroles, desktop), pas question de dupliquer le balisage juste pour
+     ça. */
+  .music-app .mini-player-volume-wrap { flex-direction: row; align-items: center; justify-content: center; gap: 4px; }
+  .music-app .mini-player-volume { order: 1; -webkit-appearance: slider-vertical; width: 4px; height: 40px; margin: 0; }
+  .music-app .mini-player-volume-icon { order: 2; }
+  /* Boutons paroles/options resserrés (comme l'ancienne 2ᵉ ligne
+     .mini-player-row-bottom, juste réappliqué à ces boutons précis
+     maintenant qu'ils sont sur la ligne unique). */
+  #mini-player-lyrics-btn, #mini-player-settings-btn { width: 30px; height: 30px; flex-shrink: 0; }
+  /* Durée : bascule de "sous la vignette" (desktop, #mini-player-time
+     inchangé) à "sous la barre de progression, en haut du bloc de gauche"
+     sur mobile — un doublon dédié (#mini-player-time-mobile, tenu à jour en
+     parallèle par le même timeupdate, voir capture.php) plutôt qu'un
+     déplacement réel du nœud DOM, qui aurait aussi déplacé la durée sur
+     desktop. */
+  .music-app #mini-player-time-mobile { display: block; font-size: 0.62rem; color: var(--text-dim); font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .music-app .mini-player-time-wrap .mini-player-time { display: none; }
+  .music-app .mini-player-time-wrap { gap: 0; }
+}
+
+/* Rangée bibliothèque/panneaux latéraux (voir capture.php) : uniquement
+   pertinente sur desktop (place pour les paroles + fiche artiste à côté de
+   la bibliothèque). Sur mobile, on retrouve le flux d'avant ce découpage —
+   .library-desktop-row et .library-main-col repassent en display:contents
+   (leurs enfants directs, .library-tabs/-section, redeviennent des blocs
+   normaux les uns sous les autres), et .library-side-panels disparaît :
+   les paroles restent une feuille modale, la fiche artiste n'a pas sa
+   place sur un petit écran. */
+@media (max-width: 760px) {
+  .music-app .library-desktop-row, .music-app .library-main-col { display: contents; }
+  .music-app .library-side-panels { display: none; }
+}
+
+/* Manual line timing must not expand or scroll the fullscreen stage. */
+.music-app .video-immersive .video-modal{position:relative;overflow:hidden}
+.music-app .video-immersive #video-player{display:block}
+.music-app .video-immersive .video-lyrics-sync-controls{position:absolute;z-index:4;left:0;right:0;bottom:0;box-sizing:border-box;margin:0;min-height:60px;padding:10px 16px max(10px,env(safe-area-inset-bottom));background:#101018f5;border-radius:0}
+.music-app .video-immersive .video-lyrics-bar.sync-mode{bottom:calc(80px + env(safe-area-inset-bottom));max-height:30%;overscroll-behavior:contain}
+.music-app .video-lyrics-bar{overscroll-behavior:contain}
+@media(max-width:760px) and (orientation:portrait){.music-app .video-immersive .video-modal{position:absolute}}
+
+.music-app .video-lyrics-bar.sync-mode button.lyrics-line{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;min-height:44px;touch-action:manipulation}.music-app .video-lyrics-bar.sync-mode button.sync-current{background:rgba(var(--accent-rgb),.16);color:var(--accent)}.video-lyrics-bar.sync-mode button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* Guided timing: one fixed target, one lyric at a time. */
+.music-app .video-lyrics-bar.sync-mode{display:none!important}
+.music-app .video-lyrics-sync-controls{padding:16px;background:#14141ef5;color:#fff}
+.sync-guide{flex:0 0 100%;text-align:center;max-width:760px;margin:auto}
+#sync-instruction,#sync-next-line{font-size:14px;color:#c9c9d4;line-height:1.45}
+#sync-current-line{font-size:clamp(18px,2.2vw,28px);font-weight:700;line-height:1.35;margin:12px 0;max-height:100px;overflow:auto;cursor:ns-resize;border-radius:8px;transition:background .15s ease,color .15s ease}
+/* Surlignage bref à chaque déplacement à la molette (voir handleSyncWheel,
+   capture.php) : sans lui, changer de ligne en scrollant est un simple
+   changement de texte, invisible si on ne fixe pas l'écran au bon moment —
+   le flash attire l'œil vers la nouvelle ligne ciblée. */
+#sync-current-line.sync-line-flash{background:var(--accent);color:var(--on-accent)}
+#sync-mark{display:block;min-height:52px;width:100%;margin:12px 0;background:var(--accent);color:var(--on-accent);border:0;border-radius:12px;font:inherit;font-weight:700;cursor:pointer}
+.sync-guide-tools{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.sync-guide-tools button,.music-app .video-lyrics-sync-controls>button{min-height:40px;padding:8px 12px;font-size:14px;border:1px solid #626271;border-radius:8px;background:#232331;color:#fff;cursor:pointer}
+.sync-guide button:disabled{opacity:.45;cursor:default}
+.music-app .video-immersive .video-lyrics-sync-controls{max-height:65%;overflow:auto;padding:12px 16px}

@@ -1,0 +1,156 @@
+/*
+ * Apparence « Carnet » : cahier d'écolier. Papier ligné bleu avec sa marge
+ * rouge, écriture manuscrite, boutons « dessinés à la main », surligneur
+ * jaune et petits gribouillis dans les coins. Le disque est un cercle tracé
+ * au crayon. Tout est dessiné en CSS ; une image déposée dans
+ * ui/skins/carnet/fond.jpg se glisse sous les lignes, comme collée.
+ * Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --cn-paper: #fdfbf3;
+  --cn-ink: #1e3a8a;
+  --cn-pencil: #3d3d3d;
+  --cn-rule: rgba(84, 132, 214, .32);
+  --cn-margin: rgba(226, 70, 70, .55);
+  --cn-marker: #fff176;
+  --cn-pink: #ff8fab;
+
+  --bg: #fdfbf3;
+  --bg-rgb: 253, 251, 243;
+  --panel: #fffdf6;
+  --panel-rgb: 255, 253, 246;
+  --panel-2: #f6f2e4;
+  --line: rgba(61, 61, 61, .16);
+  --ink-rgb: 61, 61, 61;
+  --edge-rgb: 30, 58, 138;
+  --text: #2a2a2a;
+  --text-rgb: 42, 42, 42;
+  --text-strong: #111111;
+  --text-soft: #353535;
+  --text-dim: #5b5b5b;
+  --text-faint: #6d6d6d;
+  --on-text: #fdfbf3;
+  --accent: #1e3a8a;
+  --accent-rgb: 30, 58, 138;
+  --accent-soft: #2f55c4;
+  --accent-text: #1e3a8a;
+  --on-accent: #ffffff;
+  --danger: #c62828;
+  --danger-rgb: 198, 40, 40;
+
+  /* Lignes bleues tous les 30 px, marge rouge à gauche. */
+  --cn-lines:
+    linear-gradient(90deg, transparent 0 42px, var(--cn-margin) 42px 44px, transparent 44px),
+    repeating-linear-gradient(180deg, transparent 0 29px, var(--cn-rule) 29px 30px);
+  --app-bg: var(--cn-lines), var(--cn-paper);
+  --fill: repeating-linear-gradient(110deg, var(--cn-ink) 0 3px, #3456b8 3px 5px);
+  --play-bg: var(--cn-marker);
+
+  /* Disque : feuille découpée, cercles tracés au crayon. */
+  --disc-bg:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 21px, rgba(61, 61, 61, .22) 21px 22px, transparent 22px 23px),
+    radial-gradient(circle, #fffef8 0, #f7f2e2 100%);
+  --disc-shadow: 0 0 0 2px var(--cn-pencil), 0 0 0 6px var(--cn-paper), 0 0 0 7px rgba(61, 61, 61, .5), 4px 8px 18px rgba(0, 0, 0, .12);
+  --label-bg: var(--skin-etiquette, var(--cn-marker));
+  --label-shadow: 0 0 0 2px var(--cn-pencil), 3px 3px 0 rgba(61, 61, 61, .25);
+  --label-text: var(--cn-ink);
+  --disc-sheen: none;
+  --spin-time: 3.2s;
+
+  --font-display: 'Permanent Marker', 'Comic Sans MS', cursive;
+  --font-body: 'Patrick Hand', 'Comic Sans MS', cursive;
+  --font-mono: 'Courier Prime', ui-monospace, monospace;
+  --display-weight: 400;
+  --display-leading: 1.02;
+  --display-transform: none;
+  --display-spacing: 0;
+  --brand-spacing: 0;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+
+  /* Bord irrégulier « tracé à la main » pour les boutons. */
+  --cn-hand: 255px 18px 225px 18px / 18px 225px 18px 255px;
+}
+
+/* Image personnelle éventuelle, glissée sous les lignes du cahier ;
+   gribouillis (étoile, cœur, spirale) dans les coins. */
+.app { isolation: isolate; background: var(--cn-lines), var(--skin-fond, none) 50% 30% / cover no-repeat, var(--cn-paper); }
+.app::after {
+  --cn-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 6l6 16 17 1-13 11 5 17-15-10-15 10 5-17L7 23l17-1z' fill='none' stroke='%23ff8fab' stroke-width='2.5' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --cn-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 50C10 36 6 24 14 16c6-6 13-3 16 4 3-7 10-10 16-4 8 8 4 20-16 34z' fill='none' stroke='%231e3a8a' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  --cn-spiral: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 40c0-3 4-3 4 0 0 6-9 6-9 0 0-9 14-9 14 0 0 12-19 12-19 0 0-15 24-15 24 0' fill='none' stroke='%233d3d3d' stroke-width='2' stroke-linecap='round' opacity='.55'/%3E%3C/svg%3E");
+  content: ''; position: fixed; z-index: -1; pointer-events: none; inset: 0;
+  /* Téléphone : dans la marge rouge, seul espace libre. */
+  background:
+    var(--cn-star) 2px 150px / 17px no-repeat,
+    var(--cn-heart) 2px 236px / 16px no-repeat,
+    var(--cn-spiral) 0 330px / 20px no-repeat;
+}
+
+.brand { color: var(--cn-ink); }
+.brand span { color: var(--cn-pink); }
+.now-artist { color: #c62828; font-family: var(--font-body); font-size: 15px; letter-spacing: .08em; }
+/* Titre au marqueur, souligné au surligneur jaune. */
+.now-title {
+  color: var(--cn-ink);
+  background: linear-gradient(transparent 58%, rgba(255, 241, 118, .9) 58% 90%, transparent 90%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  transform: rotate(-1deg); transform-origin: left center;
+}
+.now-meta { font-family: var(--font-mono); }
+.now-rating button { color: rgba(61, 61, 61, .25); }
+.now-rating button.on { color: #f2b705; text-shadow: 0 0 0 var(--cn-pencil); -webkit-text-stroke: 1px var(--cn-pencil); }
+
+.needle { background: #c62828; height: 4px; border-radius: 2px; box-shadow: none; transform: var(--needle-transform, translate(-100%, -50%)) rotate(-4deg); }
+.disc-label span { font: 400 16px var(--font-display); color: var(--cn-ink); letter-spacing: 0; }
+.disc-label i { background: var(--cn-pencil); }
+.disc-label.has-art { background-blend-mode: multiply; }
+
+.wheel-item { color: var(--cn-pencil); }
+.wheel-item b { font-family: var(--font-body); font-weight: 400; font-size: 19px; color: var(--cn-pencil); }
+.wheel-item i { font-family: var(--font-mono); letter-spacing: .04em; color: rgba(61, 61, 61, .65); }
+.wheel-item.is-front b { color: var(--cn-ink); background: linear-gradient(transparent 45%, rgba(255, 241, 118, .95) 45% 92%, transparent 92%); }
+.wheel-item.is-front i { color: #c62828; }
+.wheel-item.is-current b { color: var(--cn-ink); }
+.deck.is-filtering .wheel-item.is-match b { color: var(--cn-ink); text-decoration: underline wavy #c62828; }
+
+/* Boutons dessinés à la main ; actifs = coup de surligneur. */
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back {
+  background: var(--cn-paper); border: 2px solid var(--cn-pencil); color: var(--cn-pencil);
+  border-radius: var(--cn-hand);
+}
+.hub button[aria-pressed="true"], .deck-side .ib[aria-pressed="true"] { background: var(--cn-marker); color: var(--cn-ink); transform: rotate(-3deg); }
+.deck-sorts button { font-family: var(--font-body); font-size: 15px; }
+.deck-sorts button[aria-pressed="true"] { background: rgba(255, 143, 171, .55); color: var(--cn-ink); border-color: var(--cn-pencil); }
+.tabs button { font-family: var(--font-body); font-size: 17px; border-radius: var(--cn-hand); }
+.tabs button[aria-selected="true"] { background: var(--cn-marker); color: var(--cn-ink); border: 2px solid var(--cn-pencil); }
+.lyrics p { color: rgba(42, 42, 42, .35); font-family: var(--font-body); font-size: 20px; }
+.lyrics p.past { color: rgba(42, 42, 42, .5); }
+.lyrics.is-plain p { color: rgba(42, 42, 42, .85); }
+.lyrics p.on { color: var(--cn-ink); font-family: var(--font-display); text-shadow: none; }
+.lyrics-tools { background: none; }
+.bar::before { background: none; border-top: 2px dashed rgba(61, 61, 61, .35); height: 0; }
+.play { color: var(--cn-ink); border: 2px solid var(--cn-pencil); border-radius: var(--cn-hand); box-shadow: 3px 3px 0 rgba(61, 61, 61, .3); }
+.btn, .field { border-radius: var(--cn-hand); }
+.btn { border: 2px solid var(--cn-pencil); font-family: var(--font-body); }
+.btn.primary { background: var(--cn-marker); color: var(--cn-ink); }
+.search { border-radius: var(--cn-hand); background: var(--cn-paper); border: 2px solid var(--cn-pencil); }
+.sheet { background: var(--cn-lines), var(--panel); border-top: 2px solid var(--cn-pencil); }
+.sheet-head h2 { color: var(--cn-ink); }
+.toast { background: var(--cn-marker); color: var(--cn-ink); border: 2px solid var(--cn-pencil); border-radius: var(--cn-hand); }
+
+@media (max-width: 959px) {
+  .deck { border-top: 2px dashed rgba(61, 61, 61, .45); }
+}
+@media (min-width: 960px) {
+  .app::after {
+    background:
+      var(--cn-star) calc(100% - 64px) 64px / 46px no-repeat,
+      var(--cn-heart) 70% 44% / 34px no-repeat,
+      var(--cn-spiral) 8px calc(100% - 120px) / 60px no-repeat;
+  }
+  .transport { border-top: 2px dashed rgba(61, 61, 61, .45); background: rgba(253, 251, 243, .95); }
+  .lyrics p { font-size: 26px; }
+  .lyrics p.on { font-size: 36px; }
+}

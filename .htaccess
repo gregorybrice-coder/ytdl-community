@@ -1,0 +1,28 @@
+# Empêche l'accès direct aux dépendances Composer (code source PHP tiers
+# téléchargeable, métadonnées de versions) et au manifeste — rien de secret
+# dedans (les vraies clés vivent dans lib.php, hors du dossier public via
+# ytdl-data pour la base/cookies), mais aucune raison de les exposer.
+<IfModule mod_alias.c>
+    RedirectMatch 404 ^/ytdl/vendor(/|$)
+</IfModule>
+<FilesMatch "^composer\.(json|lock)$">
+    Require all denied
+</FilesMatch>
+
+# Manifeste, icônes et service worker : toujours revalidés auprès du
+# serveur. Sans en-tête, Chrome les gardait en cache plusieurs jours (le
+# manifeste n'ayant pas changé depuis longtemps) et réinstallait l'appli
+# avec l'ancienne icône.
+<IfModule mod_headers.c>
+    <FilesMatch "^(manifest\.json|icon-[0-9]+\.png|service-worker\.js)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+# La configuration et les outils ne sont jamais servis au navigateur.
+<FilesMatch "^(config(?:\.local)?|db|lib|auth|mailer)\.php$|^\.">
+    Require all denied
+</FilesMatch>
+<IfModule mod_alias.c>
+    RedirectMatch 404 ^/ytdl/(scripts|tests|config-examples|\.git|\.github|vendor)(/|$)
+</IfModule>

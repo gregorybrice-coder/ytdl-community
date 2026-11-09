@@ -1,0 +1,153 @@
+/*
+ * Apparence « Bauhaus » : affiche des années 1920. Papier crème, formes
+ * pures (cercle, carré, triangle) en rouge, bleu, jaune et noir, typographie
+ * géométrique. Le disque est une cible de grands anneaux de couleur, les
+ * boutons sont des carrés cernés de noir. Tout est dessiné en CSS ; une
+ * image déposée dans ui/skins/bauhaus/fond.jpg remplit le grand triangle.
+ * Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bh-red: #d7322b;
+  --bh-blue: #1f4fa8;
+  --bh-yellow: #f2b705;
+  --bh-black: #151515;
+  --bh-paper: #f1e9d8;
+
+  --bg: #f1e9d8;
+  --bg-rgb: 241, 233, 216;
+  --panel: #fbf6ea;
+  --panel-rgb: 251, 246, 234;
+  --panel-2: #efe5cf;
+  --line: rgba(21, 21, 21, .14);
+  --ink-rgb: 21, 21, 21;
+  --edge-rgb: 21, 21, 21;
+  --text: #151515;
+  --text-rgb: 21, 21, 21;
+  --text-strong: #000000;
+  --text-soft: #2b2b2b;
+  --text-dim: #555046;
+  --text-faint: #6c665a;
+  --on-text: #f1e9d8;
+  --accent: #d7322b;
+  --accent-rgb: 215, 50, 43;
+  --accent-soft: #d7322b;
+  --accent-text: #b8241e;
+  --on-accent: #ffffff;
+  --danger: #b8241e;
+  --danger-rgb: 184, 36, 30;
+
+  /* Composition de fond : soleil jaune, quart de cercle bleu, triangle
+     rouge, barres noires — sur papier légèrement grainé. */
+  --app-bg:
+    radial-gradient(circle at 86% 9%, var(--bh-yellow) 0 64px, transparent 65px),
+    conic-gradient(from 180deg at 0 100%, var(--bh-blue) 0 90deg, transparent 90deg) 0 100% / 150px 150px no-repeat,
+    repeating-linear-gradient(0deg, rgba(21, 21, 21, .018) 0 1px, transparent 1px 3px),
+    var(--bh-paper);
+  --app-bg-desktop:
+    radial-gradient(circle at 46% 16%, var(--bh-yellow) 0 120px, transparent 121px),
+    conic-gradient(from 180deg at 0 100%, var(--bh-blue) 0 90deg, transparent 90deg) 0 100% / 260px 260px no-repeat,
+    linear-gradient(var(--bh-black), var(--bh-black)) 0 92px / 62% 4px no-repeat,
+    repeating-linear-gradient(0deg, rgba(21, 21, 21, .018) 0 1px, transparent 1px 3px),
+    var(--bh-paper);
+  --fill: var(--bh-red);
+  --play-bg: var(--bh-red);
+
+  /* Cible bleue cerclée de noir, fins anneaux de couleurs pleines (les
+     titres blancs y restent lisibles), aucun dégradé. */
+  --disc-bg: radial-gradient(circle,
+    var(--bh-black) 0 34%, var(--bh-blue) 34% 44%, var(--bh-red) 44% 46.5%,
+    var(--bh-blue) 46.5% 66%, var(--bh-yellow) 66% 68.5%, var(--bh-blue) 68.5% 95%,
+    var(--bh-black) 95% 100%);
+  --disc-shadow: 10px 10px 0 rgba(21, 21, 21, .9);
+  --label-bg: var(--skin-etiquette, var(--bh-red));
+  --label-shadow: 0 0 0 4px var(--bh-black);
+  --label-text: #ffffff;
+  --disc-sheen: conic-gradient(from 0deg, transparent 0 75%, rgba(255, 255, 255, .16) 75% 100%);
+  --spin-time: 2.6s;
+
+  --font-display: 'League Spartan', 'Futura', system-ui, sans-serif;
+  --font-body: 'Work Sans', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+  --display-weight: 900;
+  --display-leading: .9;
+  --display-transform: uppercase;
+  --display-spacing: -.02em;
+  --brand-spacing: -.02em;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+/* Triangle rouge (PC seulement : sur téléphone, la place manque) posé à
+   gauche du disque, derrière tout. */
+.app { isolation: isolate; }
+.app::before {
+  content: ''; position: fixed; z-index: -1; pointer-events: none; display: none;
+  width: 260px; height: 225px;
+  background: var(--skin-fond, var(--bh-red));
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  opacity: .92;
+}
+
+.brand { color: var(--bh-black); }
+.brand span { color: var(--bh-red); }
+.now-artist { color: var(--bh-blue); font-family: var(--font-body); font-weight: 700; letter-spacing: .3em; }
+.now-title { color: var(--bh-black); }
+.now-rating button { color: rgba(21, 21, 21, .2); }
+.now-rating button.on { color: var(--bh-red); }
+
+.needle { background: var(--bh-black); height: 6px; border-radius: 0; box-shadow: none; width: 22px; }
+.disc-label span { font: 900 15px var(--font-display); letter-spacing: 0; color: #fff; }
+.disc-label i { background: var(--bh-black); }
+.disc-label.has-art { background-blend-mode: normal; }
+
+/* Titres du disque : capitales géométriques, lisibles sur les anneaux grâce
+   à un bandeau de papier derrière le titre en façade. */
+.wheel-item { color: var(--bh-paper); }
+.wheel-item b { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .01em; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+.wheel-item i { font-family: var(--font-mono); letter-spacing: .06em; color: rgba(255, 255, 255, .78); }
+.wheel-item.is-front b { color: var(--bh-black); background: var(--bh-yellow); padding: 1px 6px; text-shadow: none; display: inline-block; max-width: 100%; }
+.wheel-item.is-front i { color: #fff; }
+.wheel-item.is-current b { color: var(--bh-black); background: var(--bh-yellow); }
+.deck.is-filtering .wheel-item.is-match b { color: var(--bh-yellow); }
+.deck.is-filtering .wheel-item.is-match.is-front b { color: var(--bh-black); }
+
+/* Boutons : carrés cernés de noir, couleurs pleines quand actifs. */
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back {
+  background: var(--bh-paper); border: 2px solid var(--bh-black); color: var(--bh-black); border-radius: 0;
+  box-shadow: 3px 3px 0 var(--bh-black);
+}
+.hub button[aria-pressed="true"] { background: var(--bh-red); color: #fff; }
+.hub button[data-cat="video"][aria-pressed="true"] { background: var(--bh-blue); }
+.hub button[data-cat="list"][aria-pressed="true"] { background: var(--bh-yellow); color: var(--bh-black); }
+.hub button[data-cat="other"][aria-pressed="true"] { background: var(--bh-black); color: var(--bh-paper); }
+.deck-count { background: var(--bh-paper); color: var(--bh-black); border: 2px solid var(--bh-black); padding: 1px 6px; }
+.deck-count:empty { display: none; }
+.deck-sorts button[aria-pressed="true"] { background: var(--bh-blue); color: #fff; border-color: var(--bh-black); }
+.deck-side .ib[aria-pressed="true"] { background: var(--bh-yellow); color: var(--bh-black); }
+.tabs button { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; border-radius: 0; }
+.tabs button[aria-selected="true"] { background: var(--bh-black); color: var(--bh-paper); box-shadow: 3px 3px 0 var(--bh-red); }
+.lyrics p { color: rgba(21, 21, 21, .34); font-family: var(--font-body); font-weight: 600; }
+.lyrics p.past { color: rgba(21, 21, 21, .5); }
+.lyrics.is-plain p { color: rgba(21, 21, 21, .85); }
+.lyrics p.on { color: var(--bh-black); font-family: var(--font-display); font-weight: 900; text-transform: uppercase; text-shadow: none; }
+.lyrics-tools { background: none; }
+.bar::before { background: rgba(21, 21, 21, .16); height: 6px; top: 9px; border-radius: 0; }
+.fill { border-radius: 0; }
+.play { border-radius: 0; color: #fff; box-shadow: 4px 4px 0 var(--bh-black); }
+.btn, .field { border-radius: 0; }
+.btn.primary { background: var(--bh-red); color: #fff; border: 2px solid var(--bh-black); box-shadow: 3px 3px 0 var(--bh-black); }
+.search { border-radius: 0; background: var(--bh-paper); border: 2px solid var(--bh-black); }
+.sheet { background: var(--panel); border-top: 4px solid var(--bh-black); border-radius: 0; }
+.sheet-head h2 { color: var(--bh-black); }
+.toast { background: var(--bh-black); color: var(--bh-paper); border-radius: 0; }
+.avatar-ring { border-radius: 0; }
+.avatar-ring img, .avatar-ring span { border-radius: 0; }
+
+@media (max-width: 959px) {
+  .deck { border-top: 4px solid var(--bh-black); }
+}
+@media (min-width: 960px) {
+  .app::before { display: block; right: calc(max(400px, 34vw) - 210px); bottom: 96px; width: 230px; height: 200px; }
+  .transport { border-top: 4px solid var(--bh-black); background: var(--panel); }
+}

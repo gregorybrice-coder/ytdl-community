@@ -1,0 +1,54 @@
+/*
+ * Apparence « Sillon » : vinyle noir, étiquette orange, typographie
+ * condensée. Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bg: #0c0b0a;
+  --bg-rgb: 12, 11, 10;
+  --panel: #171411;
+  --panel-rgb: 28, 24, 20;
+  --panel-2: #1f1b17;
+  --line: rgba(255, 255, 255, .08);
+  --ink-rgb: 255, 255, 255;
+  --edge-rgb: 255, 190, 120;
+  --text: #f3eee6;
+  --text-rgb: 243, 238, 230;
+  --text-strong: #fff6e9;
+  --text-soft: #d9d1c4;
+  --text-dim: #a39a8c;
+  --text-faint: #8d8477;
+  --on-text: #14110d;
+  --accent: #ff8a1f;
+  --accent-rgb: 255, 138, 31;
+  --accent-soft: #ffb870;
+  --accent-text: #ff9a3c;
+  --on-accent: #1a0f04;
+  --danger: #ff6b5b;
+  --danger-rgb: 255, 107, 91;
+
+  --app-bg: radial-gradient(120% 60% at 100% 22%, #2a1a0c 0%, #0c0b0a 60%);
+  --app-bg-mobile: radial-gradient(120% 50% at 100% 100%, #2a1a0c 0%, #0c0b0a 62%);
+  --app-bg-desktop: radial-gradient(60% 80% at 100% 45%, #2a1a0c 0%, #0c0b0a 60%);
+  --fill: linear-gradient(90deg, #ff7a10, #ffc27a);
+  --play-bg: radial-gradient(circle at 35% 30%, #ffb15a, #ff7a10 60%, #c45200);
+
+  /* Vinyle : sillons, étiquette orange, reflet fixe (la lumière ne tourne pas
+     avec le disque). */
+  --disc-bg: repeating-radial-gradient(circle at 50% 50%, #121110 0 1.2px, #1c1a18 1.2px 2.6px);
+  --disc-shadow: 0 0 0 1px rgba(255, 255, 255, .05), -30px 20px 80px rgba(0, 0, 0, .8), inset 0 0 60px rgba(0, 0, 0, .9);
+  --label-bg: radial-gradient(circle at 35% 30%, #ffb15a, #ff7a10 55%, #b44a00);
+  --label-shadow: inset 0 0 0 6px rgba(0, 0, 0, .18);
+  --label-text: #2b1503;
+  --disc-sheen: conic-gradient(from 200deg, transparent 0 12%, rgba(255, 240, 220, .10) 18%, transparent 26% 62%, rgba(255, 240, 220, .07) 68%, transparent 76%);
+
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --display-weight: 900;
+  --display-leading: .86;
+  --display-transform: uppercase;
+  --display-spacing: .01em;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}

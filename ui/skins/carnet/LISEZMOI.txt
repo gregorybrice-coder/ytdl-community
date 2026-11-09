@@ -1,0 +1,9 @@
+Images personnelles de l'apparence « Carnet »
+=============================================
+
+Facultatif : l'apparence est entièrement dessinée en CSS (ui/carnet.css).
+
+  fond.jpg (ou .png / .webp)       image glissée sous les lignes du cahier
+  etiquette.jpg (ou .png / .webp)  centre du disque, quand le morceau n'a pas de pochette
+
+Ces fichiers ne sont pas suivis par git (voir .gitignore).

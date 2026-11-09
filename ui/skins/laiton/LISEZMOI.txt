@@ -1,0 +1,9 @@
+Images personnelles de l'apparence « Laiton »
+=============================================
+
+Facultatif : l'apparence est entièrement dessinée en CSS (ui/laiton.css).
+
+  fond.jpg (ou .png / .webp)       remplace le cuir du fond (voilé, engrenages par-dessus)
+  etiquette.jpg (ou .png / .webp)  centre du disque, quand le morceau n'a pas de pochette
+
+Ces fichiers ne sont pas suivis par git (voir .gitignore).

@@ -1,0 +1,15 @@
+Images personnelles de l'apparence « Héros »
+=============================================
+
+Dépose ici tes propres illustrations ; elles sont prises en compte
+automatiquement au prochain chargement de la page (aucun réglage) :
+
+  fond.jpg (ou .png / .webp)       image plein écran, floutée et voilée d'encre
+  perso.png (ou .webp)             personnage détouré (fond transparent),
+                                   affiché en haut à droite derrière le titre
+                                   sur téléphone, à gauche du disque sur PC
+  etiquette.jpg (ou .png / .webp)  centre du disque, quand le morceau n'a
+                                   pas de pochette
+
+Ces fichiers ne sont pas suivis par git (voir .gitignore).
+Le même principe vaut pour les autres apparences : ui/skins/<apparence>/.

@@ -1,0 +1,170 @@
+/*
+ * Apparence « Héros » : manga d'académie de super-héros, version combat.
+ * Une illustration plein écran (ui/skins/heros/fond.jpg, voir ui/shell.php)
+ * floutée et voilée d'encre verte, pour qu'on devine la classe entière sans
+ * qu'elle se confonde avec l'interface. Éclairs verts électriques, explosions
+ * orange ; boutons sur cases d'encre opaques. Sans image, le thème garde sa
+ * trame de points et ses traits de vitesse.
+ * Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bg: #0a0f0c;
+  --bg-rgb: 10, 15, 12;
+  --panel: #101914;
+  --panel-rgb: 16, 25, 20;
+  --panel-2: #17241c;
+  --line: rgba(57, 255, 136, .16);
+  --ink-rgb: 200, 255, 220;
+  --edge-rgb: 57, 255, 136;
+  --text: #f2fff6;
+  --text-rgb: 230, 255, 238;
+  --text-strong: #ffffff;
+  --text-soft: #c9e8d4;
+  --text-dim: #8fb39b;
+  --text-faint: #6f927b;
+  --on-text: #0a0f0c;
+  --accent: #39ff88;
+  --accent-rgb: 57, 255, 136;
+  --accent-soft: #8dffbb;
+  --accent-text: #39ff88;
+  --on-accent: #06210f;
+  --blast: #ff6a1a;
+  --blast-rgb: 255, 106, 26;
+  --volt: #ffe14d;
+  --danger: #ff4d4d;
+  --danger-rgb: 255, 77, 77;
+
+  /* Éclair dessiné ici (pas d'illustration de la série). */
+  --bolt: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 60'><path d='M2 34 L30 22 L26 32 L58 14 L52 28 L86 8 L78 26 L118 4' fill='none' stroke='%2339ff88' stroke-width='3' stroke-linejoin='bevel'/><path d='M2 34 L30 22 L26 32 L58 14 L52 28 L86 8 L78 26 L118 4' fill='none' stroke='%23eaffef' stroke-width='1'/></svg>");
+
+  /* Fond de secours si l'illustration est absente ; sinon voir .app::before. */
+  --app-bg:
+    repeating-conic-gradient(from 0deg at 100% 0%, rgba(57, 255, 136, .05) 0 1.2deg, transparent 1.2deg 5deg),
+    radial-gradient(circle, rgba(57, 255, 136, .09) 1px, transparent 1.5px) 0 0 / 8px 8px,
+    radial-gradient(70% 45% at 85% 100%, rgba(255, 106, 26, .22), transparent 70%),
+    radial-gradient(60% 45% at 10% 0%, rgba(57, 255, 136, .18), transparent 70%),
+    #0a0f0c;
+  --fill: linear-gradient(90deg, #1fd16c, #39ff88 60%, #ffe14d);
+  --play-bg: radial-gradient(circle at 40% 35%, #b7ffd4 0, #39ff88 35%, #0f8a45 100%);
+
+  /* Disque : anneau d'énergie qui crépite autour d'un cœur d'encre. */
+  --disc-bg:
+    repeating-conic-gradient(from 8deg, rgba(57, 255, 136, .0) 0 9deg, rgba(57, 255, 136, .28) 10deg, rgba(57, 255, 136, 0) 12deg 23deg),
+    repeating-radial-gradient(circle at 50% 50%, rgba(57, 255, 136, .0) 0 9px, rgba(57, 255, 136, .09) 9px 10px),
+    radial-gradient(circle, rgba(255, 255, 255, .05) 1px, transparent 1.5px) 0 0 / 9px 9px,
+    radial-gradient(circle at 50% 50%, #0f1a14 0 55%, #07100b 100%);
+  --disc-shadow: 0 0 0 3px #000, 0 0 0 5px rgba(57, 255, 136, .7), 0 0 50px rgba(57, 255, 136, .35);
+  --label-bg: var(--skin-etiquette, radial-gradient(circle at 50% 45%, #ffe14d 0 18%, #ff6a1a 19% 34%, #0a0f0c 35% 40%, #39ff88 41% 100%));
+  --label-shadow: 0 0 0 3px #000, 0 0 26px rgba(57, 255, 136, .6);
+  --label-text: #06210f;
+  --disc-sheen: conic-gradient(from 0deg, transparent 0 82%, rgba(57, 255, 136, .35) 92%, transparent 100%);
+  --spin-time: 2.2s;
+
+  --font-display: 'Bangers', 'Impact', system-ui, sans-serif;
+  --font-body: 'M PLUS Rounded 1c', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+  --display-weight: 400;
+  --display-leading: .92;
+  --display-transform: uppercase;
+  --display-spacing: .04em;
+  --brand-spacing: .06em;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+/* L'illustration : plein écran, floue, désaturée, sous un voile d'encre
+   plus léger en haut (on devine les héros derrière le titre) et presque
+   opaque en bas (paroles, disque, boutons). Placée sous tout le contenu. */
+.app { isolation: isolate; }
+.app::before {
+  content: ''; position: fixed; inset: -24px; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8, 14, 11, .5) 0%, rgba(8, 14, 11, .66) 28%, rgba(8, 14, 11, .8) 52%, rgba(8, 14, 11, .88) 100%),
+    var(--skin-fond, linear-gradient(transparent, transparent)) 50% 8% / cover no-repeat;
+  filter: blur(2px) saturate(.75);
+}
+
+/* L'énergie crépite : l'anneau de lumière du disque tourne vite et
+   clignote, comme une décharge. */
+.disc-sheen { background-size: cover; animation: heros-spark 1.4s steps(6) infinite; }
+@keyframes heros-spark { 0% { transform: rotate(0); opacity: .9; } 50% { opacity: .4; } 100% { transform: rotate(360deg); opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .disc-sheen { animation: none; } }
+
+/* Ton personnage détouré (perso.png), en surimpression derrière le titre. */
+.app::after {
+  content: ''; position: fixed; z-index: 2; pointer-events: none;
+  right: 0; top: 34px; width: 52vw; height: 32dvh;
+  background: var(--skin-perso, none) right top / contain no-repeat;
+  filter: drop-shadow(0 0 18px rgba(57, 255, 136, .35));
+  -webkit-mask-image: linear-gradient(#000 70%, transparent);
+  mask-image: linear-gradient(#000 70%, transparent);
+  opacity: .9;
+}
+
+.brand { color: #fff; }
+.brand span { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+.now-artist { color: var(--blast); font: 400 18px/1.2 var(--font-display); letter-spacing: .14em; }
+.now-title {
+  position: relative; z-index: 3; color: #fff;
+  -webkit-text-stroke: 2px #000; paint-order: stroke fill;
+  text-shadow: 4px 4px 0 #000;
+}
+.now-meta { font-weight: 700; }
+.now-rating button.on { color: var(--volt); text-shadow: 0 0 8px rgba(255, 225, 77, .7); }
+.hero::after {
+  content: ''; display: block; width: 120px; height: 60px; margin-top: 2px;
+  background: var(--bolt) left center / contain no-repeat; filter: drop-shadow(0 0 6px rgba(57, 255, 136, .8));
+  position: absolute; right: 18px; top: 4px; opacity: .85; pointer-events: none;
+}
+
+.disc-label span { font: 400 18px var(--font-display); letter-spacing: .1em; color: #06210f; }
+.disc-label.has-art { background-blend-mode: normal; }
+.disc-label i { background: #000; }
+.needle { background: var(--blast); box-shadow: 0 0 0 2px #000, 0 0 14px var(--blast); height: 6px; }
+
+.wheel-item { color: var(--text-soft); }
+.wheel-item b { font-family: var(--font-display); font-weight: 400; letter-spacing: .05em; font-size: 18px; text-shadow: 2px 2px 0 #000; }
+.wheel-item i { font-family: var(--font-body); font-weight: 800; color: var(--text-faint); }
+.wheel-item.is-front b { color: #fff; text-shadow: 2px 2px 0 #000, 0 0 14px rgba(57, 255, 136, .9); }
+.wheel-item.is-front i { color: var(--blast); }
+.wheel-item.is-current b { color: var(--accent); }
+.deck.is-filtering .wheel-item.is-match b { color: var(--volt); }
+
+/* Boutons : cases d'encre bordées d'énergie. */
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back {
+  background: rgba(6, 10, 8, .94); border: 2px solid rgba(57, 255, 136, .55); color: var(--text);
+}
+.hub button[aria-pressed="true"] { background: var(--accent); color: #06210f; border-color: #000; box-shadow: 0 0 0 2px var(--accent), 0 0 20px rgba(57, 255, 136, .7); }
+.deck-sorts button[aria-pressed="true"] { background: var(--blast); color: #1a0800; border-color: #000; }
+.deck-side .ib[aria-pressed="true"] { background: var(--volt); color: #1a1400; }
+.tabs button { font-family: var(--font-display); font-size: 18px; letter-spacing: .08em; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #06210f; box-shadow: 3px 3px 0 #000; }
+.lyrics p { font-weight: 800; }
+.lyrics p.on { color: #fff; text-shadow: 2px 2px 0 #000, 0 0 18px rgba(57, 255, 136, .8); }
+.bar::before { height: 6px; top: 9px; border-radius: 3px; background: rgba(255, 255, 255, .12); }
+.fill { height: 6px; top: 9px; border-radius: 3px; box-shadow: 0 0 12px rgba(57, 255, 136, .8); }
+.play { color: #06210f; border: 3px solid #000; box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(57, 255, 136, .6); }
+.btn { border: 2px solid rgba(57, 255, 136, .45); }
+.btn.primary { background: var(--accent); color: #06210f; border-color: #000; box-shadow: 3px 3px 0 #000; }
+.sheet { border: 2px solid rgba(57, 255, 136, .5); box-shadow: 0 0 40px rgba(57, 255, 136, .15); }
+.sheet-head h2 { color: var(--accent); text-shadow: 2px 2px 0 #000; letter-spacing: .06em; }
+.toast { border: 2px solid var(--accent); box-shadow: 0 0 24px rgba(57, 255, 136, .3); }
+.avatar-ring span { color: var(--accent); }
+
+@media (max-width: 959px) {
+  .deck { border-top: 3px solid #000; box-shadow: 0 -2px 0 rgba(57, 255, 136, .5); background: rgba(8, 14, 11, .35); }
+  .now-title { -webkit-text-stroke: 1.5px #000; text-shadow: 3px 3px 0 #000; }
+  .hero::after { width: 90px; height: 44px; }
+}
+@media (min-width: 960px) {
+  .app::after { right: calc(max(400px, 34vw) + 8px); top: auto; bottom: 96px; width: 34vw; height: 70vh; background-position: right bottom; opacity: .75; z-index: 1; }
+  /* PC : l'illustration se cale sur la gauche, là où sont titre et paroles. */
+  .app::before {
+    background:
+      linear-gradient(90deg, rgba(8, 14, 11, .66), rgba(8, 14, 11, .8) 55%, rgba(8, 14, 11, .9)),
+      var(--skin-fond, linear-gradient(transparent, transparent)) 50% 12% / cover no-repeat;
+    filter: blur(4.5px) saturate(.7);
+  }
+  .transport { border-top: 3px solid #000; box-shadow: 0 -2px 0 rgba(57, 255, 136, .45); background: rgba(10, 15, 12, .94); }
+}

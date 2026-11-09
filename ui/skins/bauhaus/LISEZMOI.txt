@@ -1,0 +1,9 @@
+Images personnelles de l'apparence « Bauhaus »
+==============================================
+
+Facultatif : l'apparence est entièrement dessinée en CSS (ui/bauhaus.css).
+
+  fond.jpg (ou .png / .webp)       remplit le grand triangle posé près du disque
+  etiquette.jpg (ou .png / .webp)  centre du disque, quand le morceau n'a pas de pochette
+
+Ces fichiers ne sont pas suivis par git (voir .gitignore).

@@ -1,0 +1,9 @@
+Images de l'apparence « Aurore »
+================================
+
+  fond.jpg        aurore boréale sur un lac gelé, peinte en code par
+                  peinture.html (ouvre-la dans Chrome, puis enregistre
+                  l'image du canevas ; changer « seed » donne un autre ciel).
+                  Elle est suivie par git, contrairement aux images perso.
+  etiquette.jpg   (facultatif) centre du disque, quand le morceau n'a pas
+                  de pochette.

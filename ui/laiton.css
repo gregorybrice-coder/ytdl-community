@@ -1,0 +1,169 @@
+/*
+ * Apparence « Laiton » : atelier steampunk. Cuir et bois sombres, laiton
+ * poli et cuivre, majuscules gravées ; un grand engrenage tourne lentement
+ * derrière le titre. Le disque est un plateau de laiton gravé, l'étiquette
+ * un médaillon de cuivre, les boutons des molettes rivetées. Tout est
+ * dessiné en CSS ; une image déposée dans ui/skins/laiton/fond.jpg
+ * remplace le cuir du fond. Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --lt-brass: linear-gradient(145deg, #f3d98a 0%, #c9a24a 30%, #8a6420 62%, #e2c070 100%);
+  --lt-copper: linear-gradient(145deg, #f0b58a 0%, #b5653a 40%, #6e3417 75%, #d48a5c 100%);
+  --lt-brass-solid: #c9a24a;
+  --lt-copper-solid: #b5653a;
+  --lt-verdigris: #5fb3a1;
+  --lt-leather: #1d130d;
+
+  --bg: #1b120c;
+  --bg-rgb: 27, 18, 12;
+  --panel: #2a1c13;
+  --panel-rgb: 42, 28, 19;
+  --panel-2: #33231a;
+  --line: rgba(201, 162, 74, .2);
+  --ink-rgb: 243, 217, 138;
+  --edge-rgb: 201, 162, 74;
+  --text: #f2e3c2;
+  --text-rgb: 242, 227, 194;
+  --text-strong: #fff4d6;
+  --text-soft: #e2cfa6;
+  --text-dim: #b9a27a;
+  --text-faint: #a08b66;
+  --on-text: #1b120c;
+  --accent: #e2c070;
+  --accent-rgb: 226, 192, 112;
+  --accent-soft: #f3d98a;
+  --accent-text: #e9c977;
+  --on-accent: #1b120c;
+  --danger: #e0674a;
+  --danger-rgb: 224, 103, 74;
+
+  /* Cuir sombre, vignettage, fines coutures. */
+  --app-bg:
+    radial-gradient(120% 80% at 50% 30%, transparent 40%, rgba(0, 0, 0, .55) 100%),
+    repeating-linear-gradient(35deg, rgba(255, 220, 160, .025) 0 2px, transparent 2px 7px),
+    radial-gradient(60% 40% at 30% 20%, #3a2618 0%, transparent 70%),
+    var(--lt-leather);
+  --fill: var(--lt-brass);
+  --play-bg: var(--lt-brass);
+
+  /* Plateau de laiton gravé : sillons concentriques, reflets métalliques. */
+  --disc-bg:
+    repeating-radial-gradient(circle at 50% 50%, rgba(60, 38, 10, 0) 0 3px, rgba(60, 38, 10, .28) 3px 4px),
+    conic-gradient(from 30deg, #8a6420, #f3d98a, #b88d36, #6e4e18, #e9c977, #8a6420, #f3d98a, #8a6420);
+  --disc-shadow: 0 0 0 3px #3b2410, 0 0 0 7px #b88d36, 0 0 0 9px #3b2410, 0 14px 40px rgba(0, 0, 0, .6);
+  --label-bg: var(--skin-etiquette, radial-gradient(circle, transparent 0 78%, #3b2410 78% 80%, transparent 80%), var(--lt-copper));
+  --label-shadow: 0 0 0 3px #3b2410, inset 0 0 18px rgba(0, 0, 0, .45);
+  --label-text: #fff1d6;
+  --disc-sheen: conic-gradient(from 0deg, transparent 0 70%, rgba(255, 244, 214, .35) 82%, transparent 92%);
+  --spin-time: 2.8s;
+
+  --font-display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-body: 'Spectral', Georgia, serif;
+  --font-mono: 'Courier Prime', ui-monospace, monospace;
+  --display-weight: 700;
+  --display-leading: .96;
+  --display-transform: uppercase;
+  --display-spacing: .02em;
+  --brand-spacing: .06em;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+
+  /* Engrenage : couronne dentée (tirets d'un cercle épais), moyeu évidé. */
+  --lt-gear: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23c9a24a' stroke-width='12' pathLength='240' stroke-dasharray='9 7'/%3E%3Ccircle cx='50' cy='50' r='34' fill='%23a37b2c'/%3E%3Ccircle cx='50' cy='50' r='24' fill='none' stroke='%236e4e18' stroke-width='3'/%3E%3Cpath d='M50 18v64M18 50h64M27 27l46 46M73 27L27 73' stroke='%236e4e18' stroke-width='5'/%3E%3Ccircle cx='50' cy='50' r='9' fill='%231b120c' stroke='%23e2c070' stroke-width='2'/%3E%3C/svg%3E");
+}
+
+/* Fond : cuir (ou l'image personnelle), petit engrenage fixe en bas à gauche. */
+.app { isolation: isolate; }
+.app::before {
+  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    var(--lt-gear) -46px calc(100% - 170px) / 150px no-repeat,
+    radial-gradient(120% 80% at 50% 30%, transparent 40%, rgba(0, 0, 0, .6) 100%),
+    var(--skin-fond, var(--app-bg)) 50% 30% / cover no-repeat;
+  opacity: .95;
+}
+/* Grand engrenage qui tourne lentement derrière le titre. */
+.app::after {
+  content: ''; position: fixed; z-index: -1; pointer-events: none;
+  width: 340px; height: 340px; right: -120px; top: -90px;
+  background: var(--lt-gear) center / contain no-repeat;
+  opacity: .22; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .6));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app::after { animation: laiton-turn 60s linear infinite; }
+  @keyframes laiton-turn { to { transform: rotate(360deg); } }
+}
+
+.brand { color: var(--text-strong); }
+.brand span { background: var(--lt-copper); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.now-artist { color: var(--lt-verdigris); font-family: var(--font-display); font-weight: 700; letter-spacing: .3em; }
+/* Titre en lettres de laiton gravées. */
+.now-title {
+  background: linear-gradient(180deg, #fff1c4 0%, #e2c070 45%, #9b7428 55%, #f3d98a 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 #3b2410) drop-shadow(0 6px 10px rgba(0, 0, 0, .6));
+}
+.now-meta { color: var(--text-dim); }
+.now-rating button { color: rgba(243, 217, 138, .2); }
+.now-rating button.on { color: #e9c977; text-shadow: 0 0 8px rgba(233, 201, 119, .55); }
+
+.needle { background: var(--lt-copper); height: 6px; border-radius: 3px; box-shadow: 0 0 0 2px #3b2410; }
+.disc-label span { font: 700 14px var(--font-display); letter-spacing: .1em; color: #fff1d6; }
+.disc-label i { background: #1b120c; box-shadow: 0 0 0 2px #e2c070; }
+.disc-label.has-art { background-blend-mode: multiply; }
+
+.wheel-item { color: #2a1a08; }
+.wheel-item b { font-family: var(--font-display); font-weight: 700; letter-spacing: .03em; color: #2a1a08; text-shadow: 0 1px 0 rgba(255, 244, 214, .45); }
+.wheel-item i { font-family: var(--font-mono); letter-spacing: .06em; color: rgba(42, 26, 8, .72); }
+.wheel-item.is-front b { color: #1b0f04; text-shadow: 0 1px 0 rgba(255, 244, 214, .7), 0 0 10px rgba(255, 244, 214, .5); }
+.wheel-item.is-front i { color: #5a2a10; }
+.wheel-item.is-current b, .wheel-item.is-current.is-paused b { color: #6e2a0c; }
+.deck-count { background: rgba(27, 18, 12, .88); color: #f3d98a; border: 1px solid #b88d36; border-radius: 10px; padding: 1px 8px; }
+.deck-count:empty { display: none; }
+.deck.is-filtering .wheel-item:not(.is-match) b, .deck.is-filtering .wheel-item:not(.is-match) i { color: rgba(42, 26, 8, .35); }
+.deck.is-filtering .wheel-item.is-match b { color: #1b0f04; }
+
+/* Molettes de laiton rivetées. */
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back {
+  background:
+    radial-gradient(circle at 50% 8%, #3b2410 0 1.5px, transparent 2px),
+    radial-gradient(circle at 50% 92%, #3b2410 0 1.5px, transparent 2px),
+    radial-gradient(circle at 30% 25%, rgba(255, 244, 214, .5), transparent 55%),
+    linear-gradient(145deg, #4a3220, #2a1c13);
+  border: 2px solid var(--lt-brass-solid); color: #f3d98a;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5), 0 3px 8px rgba(0, 0, 0, .5);
+}
+.deck-sorts button, .deck-sort, .deck-back { background: linear-gradient(145deg, #4a3220, #2a1c13); font-family: var(--font-display); letter-spacing: .06em; }
+.hub button[aria-pressed="true"], .deck-side .ib[aria-pressed="true"] { background: var(--lt-brass); color: #2a1a08; border-color: #3b2410; box-shadow: 0 0 0 2px #e2c070, 0 0 18px rgba(233, 201, 119, .55); }
+.deck-sorts button[aria-pressed="true"] { background: var(--lt-copper); color: #fff1d6; border-color: #3b2410; }
+.tabs button { font-family: var(--font-display); letter-spacing: .08em; }
+.tabs button[aria-selected="true"] { background: var(--lt-brass); color: #2a1a08; box-shadow: 0 0 0 1px #3b2410, 0 3px 10px rgba(0, 0, 0, .5); }
+.lyrics p { color: rgba(242, 227, 194, .36); font-family: var(--font-body); font-weight: 500; }
+.lyrics p.past { color: rgba(242, 227, 194, .52); }
+.lyrics.is-plain p { color: rgba(242, 227, 194, .88); }
+.lyrics p.on { color: #fff1c4; font-family: var(--font-body); font-style: italic; font-weight: 700; text-shadow: 0 0 18px rgba(233, 201, 119, .45), 0 2px 4px rgba(0, 0, 0, .8); }
+.lyrics-tools { background: none; }
+.bar::before { background: linear-gradient(180deg, #120b07, #3b2a1c); height: 6px; top: 9px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8); }
+.fill { box-shadow: 0 0 10px rgba(233, 201, 119, .5); }
+.play { color: #2a1a08; box-shadow: 0 0 0 3px #3b2410, 0 0 0 5px #b88d36, 0 6px 18px rgba(0, 0, 0, .6); }
+.btn.primary { background: var(--lt-brass); color: #2a1a08; border: 1px solid #3b2410; }
+.search { background: rgba(0, 0, 0, .35); border: 1px solid rgba(201, 162, 74, .45); }
+.sheet { background: linear-gradient(180deg, #2f2016, #1d130d); border-top: 3px solid #b88d36; }
+.sheet-head h2 { color: #f3d98a; }
+.toast { background: #2a1c13; border: 2px solid #b88d36; color: var(--text); }
+.avatar-ring span { color: #f3d98a; }
+
+@media (max-width: 959px) {
+  .deck { border-top: 3px solid #b88d36; box-shadow: 0 -1px 0 #3b2410; }
+}
+@media (min-width: 960px) {
+  /* PC : pas de petit engrenage, il passerait derrière les paroles. */
+  .app::before {
+    background:
+      radial-gradient(120% 80% at 50% 30%, transparent 40%, rgba(0, 0, 0, .6) 100%),
+      var(--skin-fond, var(--app-bg)) 50% 30% / cover no-repeat;
+  }
+  .app::after { width: 560px; height: 560px; right: auto; left: 34%; top: -220px; opacity: .16; }
+  .transport { border-top: 3px solid #b88d36; background: linear-gradient(180deg, #2f2016, #1b120c); }
+}

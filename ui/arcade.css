@@ -1,0 +1,134 @@
+/*
+ * Apparence « Arcade » : borne de jeux vidéo. Écran cathodique (lignes de
+ * balayage, léger halo), néons magenta / cyan / jaune, polices pixel,
+ * barre de progression en barre de vie, disque en anneaux de néon.
+ * Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bg: #0b0b16;
+  --bg-rgb: 11, 11, 22;
+  --panel: #13132a;
+  --panel-rgb: 19, 19, 42;
+  --panel-2: #1b1b3a;
+  --line: rgba(0, 229, 255, .2);
+  --ink-rgb: 190, 245, 255;
+  --edge-rgb: 255, 43, 214;
+  --text: #f1f6ff;
+  --text-rgb: 225, 240, 255;
+  --text-strong: #ffffff;
+  --text-soft: #c9d6ff;
+  --text-dim: #8f9bd0;
+  --text-faint: #7480b8;
+  --on-text: #0b0b16;
+  --accent: #00e5ff;
+  --accent-rgb: 0, 229, 255;
+  --accent-soft: #7cf3ff;
+  --accent-text: #00e5ff;
+  --on-accent: #06061a;
+  --neon-pink: #ff2bd6;
+  --neon-yellow: #ffe600;
+  --neon-green: #39ff14;
+  --danger: #ff3b5c;
+  --danger-rgb: 255, 59, 92;
+
+  --app-bg:
+    linear-gradient(rgba(0, 229, 255, .05) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(0, 229, 255, .05) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(70% 45% at 50% 0%, rgba(255, 43, 214, .22), transparent 70%),
+    radial-gradient(70% 50% at 50% 100%, rgba(0, 229, 255, .16), transparent 70%),
+    #0b0b16;
+  /* Barre de vie : blocs séparés. */
+  --fill: repeating-linear-gradient(90deg, #39ff14 0 10px, transparent 10px 13px);
+  --play-bg: #ff2bd6;
+
+  /* Disque : anneaux de néon et grille de pixels. */
+  --disc-bg:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 16px, rgba(255, 43, 214, .35) 16px 18px, transparent 18px 34px, rgba(0, 229, 255, .3) 34px 36px),
+    linear-gradient(rgba(255, 255, 255, .04) 2px, transparent 2px) 0 0 / 8px 8px,
+    linear-gradient(90deg, rgba(255, 255, 255, .04) 2px, transparent 2px) 0 0 / 8px 8px,
+    radial-gradient(circle, #14143a 0, #07071a 75%);
+  --disc-shadow: 0 0 0 4px #000, 0 0 0 6px var(--neon-pink), 0 0 40px rgba(255, 43, 214, .5);
+  --label-bg: var(--skin-etiquette, repeating-conic-gradient(#ffe600 0 25%, #ff9d00 0 50%));
+  --label-shadow: 0 0 0 4px #000, 0 0 24px rgba(255, 230, 0, .6);
+  --label-text: #0b0b16;
+  --disc-sheen: none;
+  --spin-time: 1.6s;
+
+  --font-display: 'Press Start 2P', ui-monospace, monospace;
+  --font-body: 'VT323', ui-monospace, monospace;
+  --font-mono: 'Silkscreen', ui-monospace, monospace;
+  --display-weight: 400;
+  --display-leading: 1.25;
+  --display-transform: uppercase;
+  --display-spacing: 0;
+  --brand-spacing: 0;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+/* Écran cathodique : lignes de balayage et léger scintillement. */
+.app::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 30;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app { animation: arcade-flicker 6s infinite steps(1); }
+  @keyframes arcade-flicker { 0%, 96%, 100% { filter: none; } 97% { filter: brightness(1.08); } 98% { filter: brightness(.96); } }
+}
+
+body { font-size: 18px; }
+.brand { font-size: 18px !important; color: var(--neon-yellow); text-shadow: 3px 3px 0 var(--neon-pink); }
+.brand span { color: var(--accent); }
+.now-artist { font: 400 11px/1.6 var(--font-display); color: var(--neon-pink); letter-spacing: .04em; }
+.now-title { color: #fff; text-shadow: 3px 3px 0 var(--neon-pink), -2px -2px 0 rgba(0, 229, 255, .7); font-size: 26px; }
+.now-meta { font: 400 16px var(--font-body); color: var(--accent); }
+.now-rating button.on { color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255, 230, 0, .8); }
+.disc-label span { font: 400 11px var(--font-display); letter-spacing: 0; left: 50%; transform: translate(-50%, -50%); }
+.disc-label span::after { content: ''; }
+.disc-label i { background: #000; }
+.needle { background: var(--neon-yellow); box-shadow: 0 0 0 2px #000, 0 0 12px var(--neon-yellow); height: 6px; border-radius: 0; }
+
+.wheel-item { color: var(--text-soft); }
+.wheel-item b { font-family: var(--font-body); font-weight: 400; font-size: 22px; line-height: 1; letter-spacing: .02em; }
+.wheel-item i { font-family: var(--font-mono); font-size: 9px; color: var(--text-faint); }
+.wheel-item.is-front b { color: var(--neon-yellow); text-shadow: 0 0 10px rgba(255, 230, 0, .8); }
+.wheel-item.is-front i { color: var(--neon-pink); }
+.wheel-item.is-current b { color: var(--neon-green); }
+
+/* Boutons carrés, bords pixel. */
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back, .tabs button, .btn, .play, .avatar-ring {
+  border-radius: 0 !important;
+}
+.hub button, .deck-side .ib { background: #000; border: 2px solid var(--accent); color: var(--accent); }
+.hub button[aria-pressed="true"] { background: var(--neon-pink); color: #000; border-color: #fff; box-shadow: 0 0 16px rgba(255, 43, 214, .8); }
+.deck-side .ib[aria-pressed="true"] { background: var(--neon-green); color: #000; }
+.deck-sorts button, .deck-sort, .deck-back { background: #000; border: 2px solid var(--accent); color: var(--accent); font-family: var(--font-mono); font-size: 10px; }
+.deck-sorts button[aria-pressed="true"] { background: var(--neon-yellow); color: #000; border-color: #fff; }
+.tabs button { font: 400 10px var(--font-display); }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #000; }
+.lyrics p { font-family: var(--font-body); font-size: 22px; line-height: 1.15; }
+.lyrics p.on { font-size: 28px; color: var(--neon-yellow); text-shadow: 0 0 12px rgba(255, 230, 0, .7); }
+.bar::before { height: 10px; top: 7px; border-radius: 0; background: #000; box-shadow: 0 0 0 2px var(--accent); }
+.fill { height: 10px; top: 7px; border-radius: 0; box-shadow: none; }
+.fill::after { display: none; }
+.progress .t { font-family: var(--font-body); font-size: 16px; }
+.play { color: #000; border: 3px solid #fff; box-shadow: 0 0 22px rgba(255, 43, 214, .8); }
+.btn { border: 2px solid var(--accent); font-family: var(--font-mono); font-weight: 400; }
+.btn.primary { background: var(--neon-pink); color: #000; border-color: #fff; }
+.sheet { border: 3px solid var(--accent); border-radius: 0 !important; box-shadow: 0 0 40px rgba(0, 229, 255, .3); }
+.sheet-head h2 { font-size: 16px; color: var(--neon-yellow); text-shadow: 3px 3px 0 var(--neon-pink); }
+.toast { border-radius: 0; border: 2px solid var(--neon-pink); }
+
+@media (max-width: 959px) {
+  .now-title { font-size: 22px; }
+  .deck { border-top: 3px solid var(--neon-pink); box-shadow: 0 -4px 18px rgba(255, 43, 214, .35); }
+}
+@media (min-width: 640px) and (max-width: 959px) { .now-title { font-size: 34px; } }
+@media (min-width: 960px) {
+  .now-title { font-size: clamp(32px, 3.4vw, 56px); }
+  .lyrics p { font-size: 28px; }
+  .lyrics p.on { font-size: 36px; }
+  .transport { border-top: 3px solid var(--neon-pink); background: rgba(11, 11, 22, .94); }
+}

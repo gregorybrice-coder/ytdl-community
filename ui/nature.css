@@ -1,0 +1,133 @@
+/*
+ * Apparence « Nature » : papier clair, fond très léger de fougères et de
+ * montagnes (dessinés ici, à peine visibles pour ne rien gêner), verts
+ * mousse et fougère, disque en coupe de tronc d'arbre. Une photo plein
+ * écran (ui/skins/nature/fond.jpg, voir ui/shell.php) les remplace, à peine
+ * floutée et voilée de papier clair pour ne pas gêner l'interface.
+ * Mise en page et composants : ui/base.css.
+ */
+
+:root {
+  --bg: #f3f1e7;
+  --bg-rgb: 243, 241, 231;
+  --panel: #fbfaf4;
+  --panel-rgb: 251, 250, 244;
+  --panel-2: #ecebdd;
+  --line: rgba(47, 62, 45, .14);
+  --ink-rgb: 47, 62, 45;
+  --edge-rgb: 74, 124, 89;
+  --text: #22301f;
+  --text-rgb: 34, 48, 31;
+  --text-strong: #162014;
+  --text-soft: #34452f;
+  --text-dim: #5b6b55;
+  --text-faint: #6f7d69;
+  --on-text: #f3f1e7;
+  --accent: #3f7a4f;
+  --accent-rgb: 63, 122, 79;
+  --accent-soft: #6aa86f;
+  --accent-text: #2f6b40;
+  --on-accent: #f7f6ee;
+  --bark: #6b4f36;
+  --danger: #b5443a;
+  --danger-rgb: 181, 68, 58;
+
+  /* Fougère et chaîne de montagnes en traits très pâles. */
+  --fern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><g fill='none' stroke='%233f7a4f' stroke-width='1.2' stroke-linecap='round' opacity='.5'><path d='M30 150 C40 110 50 80 75 40'/><path d='M36 128 l-14 -6 M40 116 l-16 -4 M45 103 l-16 -2 M51 90 l-15 0 M58 77 l-13 2 M65 64 l-11 3'/><path d='M36 128 l12 -10 M40 116 l13 -11 M45 103 l13 -11 M51 90 l12 -11 M58 77 l11 -10 M65 64 l9 -9'/></g></svg>");
+  --mountains: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200' preserveAspectRatio='none'><path d='M0 200 L0 140 L90 80 L150 120 L240 40 L330 115 L400 70 L480 130 L560 60 L650 120 L720 90 L800 130 L800 200 Z' fill='%233f7a4f' opacity='.07'/><path d='M0 200 L0 165 L120 120 L210 160 L300 110 L420 165 L520 125 L640 170 L760 135 L800 150 L800 200 Z' fill='%233f7a4f' opacity='.06'/></svg>");
+  /* Fond dessiné de secours si la photo est absente ; sinon voir .app::before. */
+  --app-bg:
+    var(--mountains) center 34dvh / 100% 140px no-repeat,
+    var(--fern) 0 0 / 180px 180px,
+    radial-gradient(80% 45% at 90% 0%, rgba(168, 213, 226, .55), transparent 70%),
+    radial-gradient(70% 40% at 0% 40%, rgba(127, 176, 105, .2), transparent 70%),
+    #f3f1e7;
+  --fill: linear-gradient(90deg, #6aa86f, #3f7a4f);
+  --play-bg: radial-gradient(circle at 40% 35%, #6aa86f, #2f6b40);
+
+  /* Coupe de tronc : cernes de croissance, écorce, fentes radiales. */
+  --disc-bg:
+    repeating-conic-gradient(from 12deg, rgba(60, 40, 20, 0) 0 37deg, rgba(60, 40, 20, .18) 37deg 37.6deg),
+    repeating-radial-gradient(circle at 51% 49%, #d9b98c 0 5px, #c9a473 5px 7px, #dcbf94 7px 11px, #c49d6a 11px 12px),
+    radial-gradient(circle, #e4c99e 0, #c9a473 70%);
+  --disc-shadow: 0 0 0 10px #6b4f36, 0 0 0 13px #4a3624, 0 16px 40px rgba(47, 62, 45, .25);
+  --label-bg: var(--skin-etiquette, radial-gradient(circle at 45% 40%, #8fc27a, #3f7a4f 70%));
+  --label-shadow: 0 0 0 3px rgba(74, 54, 36, .7);
+  --label-text: #f7f6ee;
+  --disc-sheen: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, .25), transparent 45%);
+  --spin-time: 5s;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --display-weight: 800;
+  --display-leading: .98;
+  --display-transform: none;
+  --display-spacing: -.01em;
+  --brand-spacing: 0;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+/* La photo : plein écran, à peine floue, sous un voile de papier clair plus
+   léger en haut (arbre, montagnes derrière le titre) et plus dense vers le
+   bas (paroles sur le lac, disque, boutons). Placée sous tout le contenu. */
+.app { isolation: isolate; }
+.app::before {
+  content: ''; position: fixed; inset: -24px; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(243, 241, 231, .3) 0%, rgba(243, 241, 231, .5) 28%, rgba(243, 241, 231, .66) 52%, rgba(243, 241, 231, .74) 100%),
+    var(--skin-fond, linear-gradient(transparent, transparent)) 50% 30% / cover no-repeat;
+  filter: blur(2px) saturate(.9);
+}
+
+.brand span { color: var(--accent-soft); }
+.now-artist { color: var(--bark); font-family: var(--font-body); font-weight: 800; letter-spacing: .16em; }
+.now-title { color: var(--text-strong); }
+.now-rating button.on { color: #d9a441; }
+.needle { background: var(--accent); box-shadow: 0 0 0 2px #f3f1e7; height: 6px; border-radius: 3px; }
+.disc-label span { font: 800 14px var(--font-display); letter-spacing: 0; }
+.disc-label i { background: #4a3624; }
+
+/* Titres gravés sur le bois. */
+.wheel-item { color: #3d2a17; }
+.wheel-item b { font-family: var(--font-body); font-weight: 800; text-shadow: 0 1px 0 rgba(255, 240, 210, .6); }
+.wheel-item i { font-family: var(--font-body); font-weight: 700; color: rgba(61, 42, 23, .7); }
+.wheel-item.is-front b { color: #1f3b22; }
+.wheel-item.is-front i { color: #2f6b40; }
+.wheel-item.is-current b { color: #2f6b40; }
+.deck.is-filtering .wheel-item:not(.is-match) b, .deck.is-filtering .wheel-item:not(.is-match) i { color: rgba(61, 42, 23, .3); }
+.deck.is-filtering .wheel-item.is-match b { color: #1f3b22; }
+
+.hub button, .deck-side .ib, .deck-sorts button, .deck-sort, .deck-back { background: rgba(251, 250, 244, .92); border: 1px solid rgba(47, 62, 45, .2); color: var(--text-soft); }
+.hub button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 6px 16px rgba(63, 122, 79, .35); }
+.deck-sorts button[aria-pressed="true"] { background: var(--bark); color: #fff; border-color: var(--bark); }
+.deck-side .ib[aria-pressed="true"] { background: var(--accent-soft); color: #fff; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+.lyrics p { color: rgba(34, 48, 31, .3); }
+.lyrics p.past { color: rgba(34, 48, 31, .5); }
+.lyrics.is-plain p { color: rgba(34, 48, 31, .8); }
+.lyrics p.on { color: var(--text-strong); font-family: var(--font-display); font-weight: 600; text-shadow: none; }
+.lyrics-tools { background: none; }
+.play { color: #fff; box-shadow: 0 10px 26px rgba(47, 107, 64, .35); }
+.fill { box-shadow: none; }
+.sheet { border-top: 3px solid var(--accent); box-shadow: 0 -12px 40px rgba(47, 62, 45, .15); }
+.sheet::backdrop { background: rgba(34, 48, 31, .3); }
+.toast { background: #fbfaf4; box-shadow: 0 10px 30px rgba(47, 62, 45, .2); }
+.video-layer, .video-layer .ib, .video-tools { color: #f3f1e7; }
+.video-tools button, .video-layer .sync button { color: #f3f1e7; border-color: rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .08); }
+.video-lyrics, .video-layer .sync .sync-current { color: #fff; }
+
+@media (max-width: 959px) {
+  .deck { border-top: 1px solid rgba(47, 62, 45, .12); }
+}
+@media (min-width: 960px) {
+  /* PC : image très agrandie, un peu plus de flou et de voile. */
+  .app::before {
+    background:
+      linear-gradient(90deg, rgba(243, 241, 231, .5), rgba(243, 241, 231, .66) 55%, rgba(243, 241, 231, .76)),
+      var(--skin-fond, linear-gradient(transparent, transparent)) 50% 45% / cover no-repeat;
+    filter: blur(4px) saturate(.9);
+  }
+  .transport { border-top: 1px solid rgba(47, 62, 45, .12); background: rgba(243, 241, 231, .94); }
+}
