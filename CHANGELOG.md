@@ -1,5 +1,11 @@
 # Changements de l’édition communautaire
 
+## Correctifs de sécurité — 11 novembre 2026
+
+- Page de connexion : les paroles synchronisées, saisies par les utilisateurs, sont affichées comme du texte et plus en HTML (faille XSS visible des visiteurs non connectés).
+- Import de playlist : Apple Music et YouTube Music exigent désormais un hôte exact, et le serveur n’appelle qu’une URL reconstruite, jamais le lien brut (faille SSRF vers des adresses internes).
+- Requêtes HTTP sortantes limitées au HTTPS, redirections comprises (5 au plus).
+
 ## Présentation smartphone — 9 novembre 2026
 
 - Mise en avant de l’interface tactile pour smartphone, de la PWA et de l’installation sur l’écran d’accueil.

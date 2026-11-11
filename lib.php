@@ -871,7 +871,16 @@ function ytdl_http_get(string $url): ?string {
         CURLOPT_TIMEOUT        => 10,
         CURLOPT_USERAGENT      => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
         CURLOPT_HTTPHEADER     => ['Accept: text/html,application/json'],
+        CURLOPT_MAXREDIRS      => 5,
     ]);
+    // HTTPS uniquement, redirections comprises (pas de file://, gopher://, http:// interne…).
+    if (defined('CURLOPT_PROTOCOLS_STR')) {
+        curl_setopt($ch, CURLOPT_PROTOCOLS_STR, 'https');
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS_STR, 'https');
+    } else {
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
+    }
     $response = curl_exec($ch);
     $codeHTTP = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     return ($response !== false && $codeHTTP === 200) ? $response : null;
@@ -903,12 +912,49 @@ function ytdl_json_find_key(array $data, string $key) {
     return null;
 }
 
+/**
+ * Vrai si $url est un lien http(s) dont l'hôte est exactement $host (ou www.$host).
+ * Les plateformes ne se reconnaissent plus par sous-chaîne : sinon
+ * « http://127.0.0.1/…#music.apple.com/… » passait et le serveur allait
+ * chercher une adresse interne (SSRF).
+ */
+function ytdl_url_host_is(string $url, string $host): bool {
+    $parts = parse_url(trim($url));
+    if (!is_array($parts) || isset($parts['user']) || isset($parts['pass']) || isset($parts['port'])) return false;
+    $scheme = strtolower($parts['scheme'] ?? '');
+    $actual = strtolower($parts['host'] ?? '');
+    return in_array($scheme, ['http', 'https'], true) && ($actual === $host || $actual === 'www.' . $host);
+}
+
+/**
+ * Lien canonique reconstruit pour les plateformes dont on télécharge l'URL
+ * elle-même (Apple Music, YouTube Music) : jamais l'URL brute de l'utilisateur.
+ */
+function ytdl_canonical_playlist_url(string $platform, string $url): ?string {
+    if ($platform === 'ytmusic' && ytdl_url_host_is($url, 'music.youtube.com')) {
+        parse_str((string)parse_url(trim($url), PHP_URL_QUERY), $query);
+        $list = is_string($query['list'] ?? null) ? $query['list'] : '';
+        if (parse_url(trim($url), PHP_URL_PATH) === '/playlist' && preg_match('#^[A-Za-z0-9_-]+$#', $list)) {
+            return 'https://music.youtube.com/playlist?list=' . $list;
+        }
+    }
+    if ($platform === 'apple' && ytdl_url_host_is($url, 'music.apple.com')) {
+        $path = (string)parse_url(trim($url), PHP_URL_PATH);
+        if (preg_match('#^/([a-z]{2})/playlist/([^/?\#]+)/(pl\.[a-z0-9-]+)/?$#i', $path, $m)) {
+            return 'https://music.apple.com/' . strtolower($m[1]) . '/playlist/' . rawurlencode(rawurldecode($m[2])) . '/' . $m[3];
+        }
+    }
+    return null;
+}
+
 /** Détecte la plateforme d'un lien de playlist externe, ou null si inconnu. */
 function ytdl_detect_playlist_platform(string $url): ?string {
+    // Spotify et Deezer : on n'en extrait qu'un identifiant numérique /
+    // alphanumérique, l'URL appelée est construite côté serveur.
     if (preg_match('#open\.spotify\.com/(?:[a-zA-Z-]+/)?playlist/([A-Za-z0-9]+)#i', $url)) return 'spotify';
     if (preg_match('#deezer\.(com|page\.link)/.*?playlist[/:](\d+)#i', $url) || preg_match('#deezer\.com/playlist/(\d+)#i', $url)) return 'deezer';
-    if (preg_match('#music\.youtube\.com/playlist\?.*[?&]list=([A-Za-z0-9_-]+)#i', $url)) return 'ytmusic';
-    if (preg_match('#music\.apple\.com/[a-z]{2}/playlist/[^/]+/(pl\.[a-z0-9-]+)#i', $url)) return 'apple';
+    if (ytdl_canonical_playlist_url('ytmusic', $url) !== null) return 'ytmusic';
+    if (ytdl_canonical_playlist_url('apple', $url) !== null) return 'apple';
     return null;
 }
 
@@ -950,6 +996,8 @@ function ytdl_resolve_deezer_playlist(string $url): array {
  * contrairement aux autres plateformes qui ne fournissent qu'artiste+titre.
  */
 function ytdl_resolve_ytmusic_playlist(string $url): array {
+    $url = ytdl_canonical_playlist_url('ytmusic', $url);
+    if ($url === null) return ['error' => "Lien YouTube Music non reconnu."];
     $ytDlp = ytdl_which('yt-dlp');
     if (!$ytDlp) return ['error' => 'yt-dlp est introuvable sur le serveur.'];
 
@@ -1049,6 +1097,8 @@ function ytdl_resolve_spotify_playlist(string $url): array {
  * temps, d'où la même tolérance aux erreurs qu'au-dessus.
  */
 function ytdl_resolve_apple_playlist(string $url): array {
+    $url = ytdl_canonical_playlist_url('apple', $url);
+    if ($url === null) return ['error' => "Lien Apple Music non reconnu."];
     $html = ytdl_http_get($url);
     if ($html === null) {
         return ['error' => "Impossible de joindre Apple Music — la playlist est peut-être privée."];

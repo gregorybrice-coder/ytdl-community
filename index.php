@@ -726,8 +726,15 @@ header('Cache-Control: no-store, private');
     welcomeLyricsBtn.classList.toggle('lyrics-synced', !!synced);
     welcomeLyricsBtn.title = synced ? 'Voir les paroles synchro' : 'Voir les paroles';
     if (synced) {
-      welcomeLyricsBody.innerHTML = synced.map(l =>
-        '<div class="welcome-lyrics-line">' + (l.text || ' ') + '</div>').join('');
+      // textContent, jamais innerHTML : les paroles synchro sont saisies par
+      // les utilisateurs (lyrics-manual-sync.php) et affichées ici aux
+      // visiteurs non connectés — du HTML injecté s'y exécuterait.
+      welcomeLyricsBody.replaceChildren(...synced.map(l => {
+        const div = document.createElement('div');
+        div.className = 'welcome-lyrics-line';
+        div.textContent = l.text || ' ';
+        return div;
+      }));
     } else {
       welcomeLyricsBody.textContent = lyrics || '';
     }
