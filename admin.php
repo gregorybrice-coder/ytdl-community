@@ -127,9 +127,73 @@ $active = $pdo->query("SELECT * FROM users WHERE status = 'active' ORDER BY id A
     </p>
     <button type="button" class="approve" id="clean-titles-btn">Nettoyer les titres de la bibliothèque</button>
     <div id="clean-titles-result" style="margin-top:12px;font-size:0.85rem;"></div>
+
+    <h2>Cookies YouTube</h2>
+    <p class="empty" style="font-style:normal;">
+      YouTube demande de plus en plus au serveur de prouver qu'il n'est pas un
+      robot : il présente pour cela les cookies d'une session YouTube. Quand
+      ils expirent, tous les téléchargements échouent (« les cookies ont
+      probablement expiré »). Les nouveaux cookies sont vérifiés par YouTube
+      avant d'être installés : un fichier refusé ne remplace jamais celui qui
+      fonctionne. Seuls les cookies de YouTube et Google sont conservés.
+    </p>
+    <div class="card" style="display:block;">
+      <div id="cookies-status" style="font-size:0.85rem;">Lecture de l'état…</div>
+      <div class="actions" style="margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="approve" id="cookies-test">Tester maintenant</button>
+        <button type="button" class="approve" id="cookies-chrome">Renouveler depuis Chrome</button>
+        <button type="button" class="approve" id="cookies-firefox">Renouveler depuis Firefox</button>
+      </div>
+      <p class="empty" style="font-style:normal;margin:12px 0 6px;">
+        Chrome : macOS peut demander, sur l'écran du Mac, d'autoriser l'accès
+        au trousseau (à accepter dans la minute). Firefox n'en a pas besoin.
+        Si cela échoue, envoie un fichier <code>cookies.txt</code> exporté par
+        une extension de navigateur (« Get cookies.txt LOCALLY »), YouTube
+        étant connecté :
+      </p>
+      <input type="file" id="cookies-file" accept=".txt,text/plain" style="font-size:0.8rem;color:var(--text-dim);">
+      <button type="button" class="approve" id="cookies-upload" style="margin-left:8px;">Envoyer le fichier</button>
+      <div id="cookies-result" style="margin-top:12px;font-size:0.85rem;white-space:pre-line;"></div>
+    </div>
   </div>
 
   <script>
+    // --- Cookies YouTube (admin-cookies.php) ---
+    const ckStatus = document.getElementById('cookies-status');
+    const ckResult = document.getElementById('cookies-result');
+    const ckButtons = ['cookies-test', 'cookies-chrome', 'cookies-firefox', 'cookies-upload'].map(id => document.getElementById(id));
+    function ckPaint(s) {
+      if (!s.exists) { ckStatus.textContent = 'Aucun fichier de cookies sur le serveur.'; return; }
+      ckStatus.textContent = 'Fichier du ' + s.modified + ' (' + s.age_days + ' jour' + (s.age_days > 1 ? 's' : '') + ') — '
+        + s.count + ' cookies, ' + (s.has_auth ? 'session YouTube connectée' : 'AUCUN cookie de connexion');
+    }
+    async function ckCall(body, label) {
+      ckButtons.forEach(b => b.disabled = true);
+      ckResult.style.color = 'var(--text-dim)';
+      ckResult.textContent = label;
+      try {
+        const res = await fetch('admin-cookies.php', { method: 'POST', body, headers: { 'X-Requested-With': 'ytdl-admin' } });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        ckResult.style.color = data.ok ? 'var(--success)' : 'var(--error)';
+        ckResult.textContent = data.message;
+        if (data.status) ckPaint(data.status);
+      } catch (err) {
+        ckResult.style.color = 'var(--error)';
+        ckResult.textContent = 'Erreur : ' + err.message;
+      } finally { ckButtons.forEach(b => b.disabled = false); }
+    }
+    const ckForm = (obj) => { const f = new FormData(); Object.entries(obj).forEach(([k, v]) => f.append(k, v)); return f; };
+    document.getElementById('cookies-test').addEventListener('click', () => ckCall(ckForm({ action: 'test' }), 'Test auprès de YouTube…'));
+    document.getElementById('cookies-chrome').addEventListener('click', () => ckCall(ckForm({ action: 'renew', browser: 'chrome' }), 'Lecture des cookies de Chrome… (autorise le trousseau sur le Mac si macOS le demande)'));
+    document.getElementById('cookies-firefox').addEventListener('click', () => ckCall(ckForm({ action: 'renew', browser: 'firefox' }), 'Lecture des cookies de Firefox…'));
+    document.getElementById('cookies-upload').addEventListener('click', () => {
+      const file = document.getElementById('cookies-file').files[0];
+      if (!file) { ckResult.style.color = 'var(--error)'; ckResult.textContent = 'Choisis d\'abord un fichier cookies.txt.'; return; }
+      ckCall(ckForm({ action: 'upload', file }), 'Vérification du fichier par YouTube…');
+    });
+    fetch('admin-cookies.php', { headers: { 'X-Requested-With': 'ytdl-admin' } }).then(r => r.json()).then(ckPaint).catch(() => { ckStatus.textContent = 'État indisponible.'; });
+
     const cleanTitlesBtn = document.getElementById('clean-titles-btn');
     const cleanTitlesResult = document.getElementById('clean-titles-result');
     cleanTitlesBtn.addEventListener('click', async () => {

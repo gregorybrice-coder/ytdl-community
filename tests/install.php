@@ -24,6 +24,9 @@ try {
  check(ytdl_detect_playlist_platform('https://music.youtube.com/watch?v=abc&list=PLabc123')==='ytmusic','Titre YouTube Music ouvert depuis une playlist reconnu');
  check(ytdl_detect_playlist_platform('https://www.youtube.com/playlist?list=WL')===null&&ytdl_detect_playlist_platform('https://youtube.com.example.org/playlist?list=PLabc')===null,'Listes privées et hôtes détournés refusés');
  [$status]=runPhp([$root.'/import-worker.php','999']);check($status===0,'Processus d’import : travail inconnu ignoré sans erreur');
+ require $root.'/cookies-lib.php';$cookies="# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\tx\n.autre-site.example\tTRUE\t/\tTRUE\t0\tSID\ty\n";
+ check(ytdl_cookies_filter($cookies)==="# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\tx\n",'Cookies : seuls ceux de YouTube et Google sont gardés');
+ check(ytdl_cookies_has_auth($cookies)&&!ytdl_cookies_has_auth("# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tVISITOR_INFO1_LIVE\tz\n"),'Cookies : un export sans connexion est refusé');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');
  file_put_contents(YTDL_DATA_DIR.'/smtp-config.php','<?php return '.var_export(['host'=>'smtp.example.org','port'=>587,'username'=>'example','password'=>'test-only','from'=>'no-reply@example.org'],true).';');
  check(ytdl_smtp_config()['from']==='no-reply@example.org','SMTP privé reconnu sans envoi');

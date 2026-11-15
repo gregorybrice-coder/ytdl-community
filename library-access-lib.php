@@ -17,6 +17,19 @@ function ytdl_viewer_has_library_access(int $viewerId, int $ownerId): bool {
     return $stmt->fetchColumn() !== false;
 }
 
+/** Titres visibles d'un compte : total, clips (vidéos hors « hors musique ») et hors musique. */
+function ytdl_library_track_counts(int $ownerId): array {
+    $stmt = ytdl_db()->prepare(
+        "SELECT COUNT(*) AS n,
+                SUM(audio_only = 0 AND category <> 'other') AS clips,
+                SUM(category = 'other') AS other
+         FROM download_history WHERE user_id = :id AND library_path IS NOT NULL AND library_path <> ''"
+    );
+    $stmt->execute([':id' => $ownerId]);
+    $r = $stmt->fetch(PDO::FETCH_ASSOC);
+    return ['count' => (int)$r['n'], 'clips' => (int)$r['clips'], 'other' => (int)$r['other']];
+}
+
 /** Nombre de titres visibles dans la bibliothèque d'un compte. */
 function ytdl_library_track_count(int $ownerId): int {
     $stmt = ytdl_db()->prepare(

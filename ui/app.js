@@ -272,8 +272,15 @@
   // lecture seule au nom du propriétaire, à la suite des miennes.
   function remoteItems() {
     if (state.cat !== 'list' || state.playlist) return [];
-    return Y.access.libs.map(l => ({ kind: 'playlist', id: 'lib:' + l.owner_id, name: l.name, count: l.count,
-      sortKey: l.name.toLowerCase(), remote: true, ownerId: l.owner_id, playlistColor: '#cfd6e4' }));
+    // La bibliothèque entière, puis ses clips et son « hors musique » à part
+    // (« Greg › Clips ») quand il y en a : lecture seule, sans rien importer.
+    return Y.access.libs.flatMap(l => {
+      const entry = (suffix, filter, count) => ({ kind: 'playlist', id: 'lib:' + l.owner_id + (filter ? ':' + filter : ''),
+        name: l.name + suffix, count, sortKey: (l.name + suffix).toLowerCase(), remote: true, ownerId: l.owner_id, filter, playlistColor: '#cfd6e4' });
+      return [entry('', null, l.count),
+        ...(l.clips ? [entry(' › Clips', 'clips', l.clips)] : []),
+        ...(l.other ? [entry(' › Hors musique', 'other', l.other)] : [])];
+    });
   }
 
   // Liste montrée par la molette : pendant une recherche, uniquement les
@@ -419,8 +426,8 @@
 
   async function openPlaylist(item) {
     try {
-      const tracks = item.remote ? await Y.access.tracks(item.ownerId) : await library.playlistItems(item.id);
-      state.playlist = { id: item.id, name: item.name, tracks, remote: !!item.remote, ownerId: item.ownerId };
+      const tracks = item.remote ? await loadRemoteTracks(item.ownerId, item.filter) : await library.playlistItems(item.id);
+      state.playlist = { id: item.id, name: item.name, tracks, remote: !!item.remote, ownerId: item.ownerId, filter: item.filter };
       state.query = ''; state.frozen = false; beforeSearch = null; $('search-input').value = ''; syncSearchUi();
       refreshWheel(false);
       wheel.scrollTo(0, true);
@@ -1087,6 +1094,13 @@
       h('div', { class: 'row-btns' }, save));
   }
 
+  // Titres d'une bibliothèque consultée ; filter : 'clips' (vidéos) ou 'other' (hors musique).
+  async function loadRemoteTracks(ownerId, filter) {
+    const all = await Y.access.tracks(ownerId);
+    return filter === 'clips' ? all.filter(t => !t.isAudio && t.category !== 'other')
+      : filter === 'other' ? all.filter(t => t.category === 'other') : all;
+  }
+
   // Titre d'une bibliothèque consultée en lecture seule : on ne peut que
   // l'importer (un lien vers le fichier du propriétaire, sans copie).
   function openMoreRemote(track) {
@@ -1101,7 +1115,7 @@
       const res = await Y.access.import(ownerId, ids);
       closeSheet();
       // La playlist affichée reprend les titres tels qu'ils sont chez moi.
-      if (state.playlist && state.playlist.remote) { const pl = state.playlist; pl.tracks = await Y.access.tracks(ownerId); }
+      if (state.playlist && state.playlist.remote) { const pl = state.playlist; pl.tracks = await loadRemoteTracks(ownerId, pl.filter); }
       refreshWheel(true); paintUsage();
       toast(ids ? doneText : res.imported + ' titre' + (res.imported > 1 ? 's' : '') + ' importé' + (res.imported > 1 ? 's' : '') + ' dans ta bibliothèque');
     } catch (err) { toast(err.message); }
@@ -2005,11 +2019,11 @@
       // Bibliothèque d'un autre compte : lecture seule, import ou départ.
       items.splice(2, 2,
         h('li', null, h('button', { type: 'button', html: ICON.download, onclick: async () => {
-          const ok = await confirmSheet('Tout importer', 'Importer les ' + pl.tracks.length + ' titres de la bibliothèque de ' + pl.name + ' dans la tienne ? Aucun fichier n\'est copié : ce sont des liens vers les siens.', 'Importer', false);
-          if (ok) importTracks(pl.ownerId, null);
+          const ok = await confirmSheet('Tout importer', 'Importer les ' + pl.tracks.length + ' titres' + (pl.filter ? ' (' + pl.name + ')' : ' de la bibliothèque de ' + pl.name) + ' dans la tienne ? Aucun fichier n\'est copié : ce sont des liens vers les siens.', 'Importer', false);
+          if (ok) importTracks(pl.ownerId, pl.filter ? pl.tracks.filter(t => t._remote).map(t => t.id) : null, pl.filter ? 'Importé dans ta bibliothèque' : undefined);
         } }, 'Tout importer (' + pl.tracks.length + ')')),
         h('li', null, h('button', { type: 'button', class: 'danger', html: ICON.trash, onclick: async () => {
-          const ok = await confirmSheet('Quitter', 'Ne plus consulter la bibliothèque de ' + pl.name + ' ? Les titres déjà importés restent chez toi.', 'Quitter', true);
+          const ok = await confirmSheet('Quitter', 'Ne plus consulter la bibliothèque de ' + ((Y.access.libs.find(l => l.owner_id === pl.ownerId) || {}).name || pl.name) + ' ? Les titres déjà importés restent chez toi.', 'Quitter', true);
           if (!ok) return;
           try { await Y.access.leave(pl.ownerId); state.playlist = null; refreshWheel(false); toast('Bibliothèque retirée de tes playlists'); } catch (err) { toast(err.message); }
         } }, 'Ne plus suivre cette bibliothèque')));

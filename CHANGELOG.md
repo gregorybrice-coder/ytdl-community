@@ -4,6 +4,8 @@
 
 - **Accès à la bibliothèque d’un autre compte** : un compte peut la demander ; le propriétaire accepte ou refuse (profil › Bibliothèques) et est prévenu par notification push, e-mail et pastille. Une fois accordée, elle apparaît dans les playlists du demandeur, au prénom du propriétaire, en lecture seule : écoute et import de titres sans téléchargement du fichier ni copie (simple lien).
 - **Import exécuté par le serveur** : une fois lancé, l’import d’une playlist se poursuit même si le téléphone s’éteint, passe en arrière-plan ou perd le réseau. L’appli en affiche l’avancement (disque de progression, liste des titres, bouton « Arrêter l’import »), une notification prévient à la fin, et le processus est relancé automatiquement si le serveur redémarre.
+- **Administration — cookies YouTube** : état du fichier, test auprès de YouTube, renouvellement depuis Chrome ou Firefox ou par envoi d’un `cookies.txt`. Seuls les cookies de YouTube et Google sont gardés, et rien n’est installé sans avoir été accepté par YouTube (l’ancien fichier reste en `.bak`).
+- **Bibliothèque consultée** : « Prénom › Clips » et « Prénom › Hors musique » à part, en lecture seule.
 - **Vidéos privées** : une vidéo privée ou indisponible d’une playlist est ignorée (et indiquée dans le bilan) au lieu d’être comptée comme un échec.
 - **Import de playlist YouTube** : un lien `youtube.com/playlist` (ou une vidéo ouverte depuis une playlist) s’importe avec le nom de la playlist YouTube, jusqu’à 1000 titres ; coller le lien dans « Ajouter » ouvre l’import.
 - **Partage** : le propriétaire d’un titre apparaît dans la liste de partage ; le lui partager le lui recommande (« partagé par … »).

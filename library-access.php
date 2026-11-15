@@ -33,8 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $state = $row['status'] ?? 'none';
         $users[] = ['id' => (int)$row['id'], 'name' => $row['name'], 'avatar' => $row['avatar'], 'state' => $state];
         if ($state === 'approved') {
-            $libraries[] = ['owner_id' => (int)$row['id'], 'name' => $row['name'], 'avatar' => $row['avatar'],
-                            'count' => ytdl_library_track_count((int)$row['id'])];
+            $libraries[] = ['owner_id' => (int)$row['id'], 'name' => $row['name'], 'avatar' => $row['avatar']]
+                + ytdl_library_track_counts((int)$row['id']);
         }
     }
 

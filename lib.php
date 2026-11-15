@@ -1497,8 +1497,11 @@ function ytdl_validate_url(string $url): void {
  * Il vit hors du dossier servi par Apache, comme la base : ces cookies donnent
  * accès au compte Google associé, ils ne doivent jamais être téléchargeables.
  */
+function ytdl_cookies_dest(): string {
+    return YTDL_DATA_DIR . '/cookies.txt';
+}
 function ytdl_cookies_path(): ?string {
-    $path = YTDL_DATA_DIR . '/cookies.txt';
+    $path = ytdl_cookies_dest();
     return (is_file($path) && is_readable($path)) ? $path : null;
 }
 
