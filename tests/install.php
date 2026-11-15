@@ -29,9 +29,9 @@ try {
  check(ytdl_cookies_has_auth($cookies)&&!ytdl_cookies_has_auth("# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tVISITOR_INFO1_LIVE\tz\n"),'Cookies : un export sans connexion est refusé');
  require $root.'/genre-lib.php';
  check($db->query('SELECT genre, genre_source, genre_checked_at FROM download_history LIMIT 1')!==false,'Colonnes de genre présentes sur base neuve');
- check(ytdl_genre_normalize('Rap/Hip Hop')==='Rap / Hip-Hop'&&ytdl_genre_normalize('Films/Games')==='Bande originale'&&ytdl_genre_normalize('Alternative')==='Alternatif / Indé'&&ytdl_genre_normalize('Inconnu')===null,'Genres des services ramenés à la liste');
- check(ytdl_genre_parse('Artiste - Titre (Official Video)','')===['Artiste','Titre']&&ytdl_genre_is_valid('Inclassable')&&!ytdl_genre_is_valid('Inventé'),'Artiste/titre extraits, liste de genres fermée');
- check(ytdl_genre_from_keywords('Méditation 432 Hz','')==='New Age / Méditation','Genre déduit des mots-clés à défaut de service');
+ check($db->query("SELECT artist_key, genre, source FROM artist_genres LIMIT 1")!==false,'Cache des genres par artiste présent sur base neuve');
+ check(ytdl_genre_clean('  rap   français ')==='Rap français'&&ytdl_genre_clean('')===null&&ytdl_genre_clean(str_repeat('x',41))===null,'Nom de genre saisi nettoyé et borné');
+ check(ytdl_genre_parse('Artiste - Titre (Official Video)','')[0]==='Artiste'&&ytdl_genre_parse('Sans séparateur','Chaîne - Topic')[0]==='Chaîne'&&ytdl_genre_parse('A & B - Titre','')[0]==='A'&&ytdl_genre_same_name('The Beatles','Beatles'),'Artiste extrait du titre, noms d’artistes comparés');
  [$status]=runPhp([$root.'/genre-worker.php']);check($status===0,'Classement des genres : aucun titre à traiter, sortie sans erreur');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');
  file_put_contents(YTDL_DATA_DIR.'/smtp-config.php','<?php return '.var_export(['host'=>'smtp.example.org','port'=>587,'username'=>'example','password'=>'test-only','from'=>'no-reply@example.org'],true).';');

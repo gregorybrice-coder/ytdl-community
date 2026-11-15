@@ -130,10 +130,12 @@ $active = $pdo->query("SELECT * FROM users WHERE status = 'active' ORDER BY id A
 
     <h2>Genres musicaux</h2>
     <p class="empty" style="font-style:normal;">
-      Chaque titre est rangé automatiquement dans un genre (services gratuits
-      Deezer puis iTunes, à défaut mots-clés du titre). Ceux qu'aucun service ne
-      reconnaît vont dans « Inclassable » : chacun peut les déplacer à la main
-      (menu « … » d'un titre › Genre). Les choix manuels ne sont jamais écrasés.
+      Le genre de chaque titre vient d'une base musicale ouverte et mondiale :
+      celui de l'artiste dans MusicBrainz, à défaut dans Wikidata, avec le nom
+      que donne la base (seul le nom de l'artiste leur est envoyé). Un artiste
+      qu'aucune base ne connaît va dans « Inclassable » : chacun peut déplacer
+      ses titres à la main (menu « … » d'un titre › Genre) ; les choix manuels
+      ne sont jamais écrasés.
     </p>
     <div class="card" style="display:block;">
       <div id="genres-status" style="font-size:0.85rem;line-height:1.6;white-space:pre-line;">Lecture…</div>

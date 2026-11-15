@@ -135,7 +135,6 @@ $attachGain($sharedTracks);
 ytdl_genre_spawn();
 
 echo json_encode([
-    'genres' => ytdl_genre_list(),
     'tracks' => $tracks,
     'shared_tracks' => $sharedTracks,
     'usage' => ytdl_library_usage($user['id']),

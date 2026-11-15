@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') ytdl_json_error('Méthode non autoris
 
 $p = json_decode(file_get_contents('php://input'), true) ?: [];
 $id = (int)($p['id'] ?? 0);
-$genre = (string)($p['genre'] ?? '');
-if (!ytdl_genre_is_valid($genre)) ytdl_json_error('Genre inconnu.', 400);
+$genre = ytdl_genre_clean((string)($p['genre'] ?? ''));
+if ($genre === null) ytdl_json_error('Nom de genre invalide (40 caractères au plus).', 400);
 
 $st = ytdl_db()->prepare('SELECT user_id FROM download_history WHERE id = :id');
 $st->execute([':id' => $id]);

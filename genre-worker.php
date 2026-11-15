@@ -1,8 +1,9 @@
 <?php
 /**
- * Classement des titres par genre, en arrière-plan (voir genre-lib.php).
- * Parcourt les fichiers jamais classés, de tous les comptes, doucement
- * (services gratuits). Un seul processus à la fois ; ne touche jamais aux
+ * Classement des titres par genre, en arrière-plan (voir genre-lib.php) :
+ * le genre de l'artiste vient de MusicBrainz, puis de Wikidata. Parcourt les
+ * fichiers jamais classés, de tous les comptes, doucement (une requête par
+ * seconde, comme le demande MusicBrainz). Un seul processus à la fois ; ne touche jamais aux
  * genres choisis à la main. Usage : php genre-worker.php
  */
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
@@ -27,6 +28,7 @@ $update = $db->prepare(
 );
 
 $n = 0;
+$failures = 0;
 while (true) {
     $select->execute();
     $row = $select->fetch(PDO::FETCH_ASSOC);
@@ -34,14 +36,18 @@ while (true) {
     if (!$row) break;
     try {
         [$genre, $source] = ytdl_genre_classify((string)$row['title'], (string)$row['uploader']);
+        $failures = 0;
     } catch (Throwable $e) {
+        // Base momentanément indisponible : le titre sera repris plus tard (il
+        // n'est pas marqué), et le processus s'arrête si cela dure.
         error_log('ytdl genre-worker : ' . $e->getMessage());
-        [$genre, $source] = [YTDL_GENRE_UNCLASSIFIED, 'aucun'];
+        if (++$failures >= 4) break;
+        sleep(60);
+        continue;
     }
     for ($i = 0; ; $i++) {
         try { $update->execute([':g' => $genre, ':s' => $source, ':id' => $row['id']]); break; }
         catch (PDOException $e) { if ($i >= 6) throw $e; sleep(2); }
     }
     $n++;
-    usleep(300000);
 }

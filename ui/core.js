@@ -113,7 +113,6 @@
   const library = Object.assign(emitter(), {
     tracks: [],        // toutes les pistes (les miennes + partagées avec moi)
     usage: null,
-    genres: [],        // liste des genres proposés (voir genre-lib.php)
     playlists: [],
     membership: {},    // history_id -> [playlist_id]
     deleted: new Set(), // titres supprimés ici, voir load()
@@ -133,7 +132,6 @@
         this.tracks = fresh.filter(t => !this.deleted.has(Number(t.id))).map(decorate)
           .sort((a, b) => new Date(b.downloaded_at) - new Date(a.downloaded_at));
         this.usage = data.usage || null;
-        this.genres = data.genres || this.genres || [];
         this.error = null;
       } catch (err) {
         this.error = err.message;

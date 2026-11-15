@@ -213,6 +213,18 @@ function ytdl_db(): PDO {
         if (!in_array($col, $dhCols, true)) $pdo->exec("ALTER TABLE download_history ADD COLUMN $col $type");
     }
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_download_history_genre ON download_history(genre)');
+    // Genre trouvé pour un artiste dans les bases ouvertes (MusicBrainz, Wikidata) :
+    // chaque artiste n'est interrogé qu'une fois, tous ses titres en profitent.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS artist_genres (
+            artist_key TEXT PRIMARY KEY,
+            artist TEXT NOT NULL,
+            genre TEXT NOT NULL,
+            source TEXT NOT NULL,
+            mbid TEXT,
+            checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    ");
 
     // Import de playlist exécuté PAR LE SERVEUR (import-worker.php) : il se
     // poursuit même si le téléphone s'éteint, passe en arrière-plan ou perd

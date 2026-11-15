@@ -269,18 +269,24 @@
   }
 
   // Playlists AUTOMATIQUES par genre (♫) : calculées à partir des genres des
-  // titres de ma bibliothèque (trouvés par le serveur, ou choisis à la main),
-  // donc toujours à jour. Lecture seule ; en tête de la liste des playlists.
+  // titres de ma bibliothèque (donnés par les bases musicales ouvertes, ou
+  // choisis à la main), avec les noms de la base. Toujours à jour, lecture
+  // seule, en tête de la liste des playlists. Un genre n'a sa playlist qu'à
+  // partir de 3 titres ; « Inclassable » (artiste inconnu des bases) toujours.
   const GENRE_COLORS = ['#ffb4c2', '#ffa987', '#b9a6ff', '#8fd3ff', '#9ee6b3', '#ffd37a', '#f4a6e0', '#7fe0d4', '#d6c28a',
-    '#ff9d9d', '#a9b8ff', '#c7e58c', '#e9b4ff', '#87d2ff', '#ffc999', '#a0e8c8', '#f0d98a', '#b8c4d6', '#c9c9c9'];
-  function genreItems() {
-    if (state.cat !== 'list' || state.playlist) return [];
+    '#ff9d9d', '#a9b8ff', '#c7e58c', '#e9b4ff', '#87d2ff', '#ffc999', '#a0e8c8'];
+  const UNCLASSIFIED = 'Inclassable';
+  const genreColor = (g) => g === UNCLASSIFIED ? '#c9c9c9' : GENRE_COLORS[[...g].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % GENRE_COLORS.length];
+  function genreCounts() {
     const counts = new Map();
     library.tracks.forEach(t => { if (t.genre) counts.set(t.genre, (counts.get(t.genre) || 0) + 1); });
-    const order = library.genres || [];
-    return [...counts.keys()].sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).map(g => ({
-      kind: 'playlist', id: 'genre:' + g, name: '♫ ' + g, count: counts.get(g), sortKey: '', virtual: true, genre: g,
-      playlistColor: GENRE_COLORS[Math.max(0, order.indexOf(g)) % GENRE_COLORS.length] }));
+    return counts;
+  }
+  function genreItems() {
+    if (state.cat !== 'list' || state.playlist) return [];
+    return [...genreCounts()].filter(([g, n]) => n >= 3 || g === UNCLASSIFIED)
+      .sort((a, b) => (a[0] === UNCLASSIFIED) - (b[0] === UNCLASSIFIED) || b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([g, n]) => ({ kind: 'playlist', id: 'genre:' + g, name: '♫ ' + g, count: n, sortKey: '', virtual: true, genre: g, playlistColor: genreColor(g) }));
   }
 
   // Bibliothèques d'autres comptes dont j'ai l'accès : des « playlists » en
@@ -1119,19 +1125,28 @@
 
   // Titre d'une bibliothèque consultée en lecture seule : on ne peut que
   // l'importer (un lien vers le fichier du propriétaire, sans copie).
-  // Déplace un titre dans un autre genre (par ex. depuis « Inclassable ») ;
-  // il n'est alors plus reclassé automatiquement.
+  // Déplace un titre dans un autre genre (par ex. depuis « Inclassable ») : un
+  // genre déjà présent dans la bibliothèque, ou un nom saisi. Le choix est
+  // conservé : il n'est plus reclassé automatiquement.
   function openGenrePicker(track) {
-    const pick = async (g) => {
-      try { await Y.api.json('track-genre.php', { id: track.id, genre: g }); } catch (err) { toast(err.message); return; }
-      track.genre = g;
-      const mine = library.tracks.find(t => t.id === track.id); if (mine) mine.genre = g; // la liste de la bibliothèque aussi
+    const choose = async (g) => {
+      g = (g || '').trim();
+      if (!g) return;
+      let res;
+      try { res = await Y.api.json('track-genre.php', { id: track.id, genre: g }); } catch (err) { toast(err.message); return; }
+      track.genre = res.genre;
+      const mine = library.tracks.find(t => t.id === track.id); if (mine) mine.genre = res.genre; // la liste de la bibliothèque aussi
       closeSheet(); refreshWheel(true);
       if (shownTrack === track) showNow(track, false);
-      toast('« ' + track.name + ' » est maintenant dans « ' + g + ' »');
+      toast('« ' + track.name + ' » est maintenant dans « ' + res.genre + ' »');
     };
-    openSheet('Genre', h('p', null, track.name), h('ul', { class: 'menu' }, (library.genres || []).map(g =>
-      h('li', null, h('button', { type: 'button', 'aria-current': String(g === track.genre), onclick: () => pick(g) }, (g === track.genre ? '✓ ' : '') + g)))));
+    const existing = [...genreCounts().keys()].sort((a, b) => (a === UNCLASSIFIED) - (b === UNCLASSIFIED) || a.localeCompare(b));
+    if (!existing.includes(UNCLASSIFIED)) existing.push(UNCLASSIFIED);
+    const input = h('input', { class: 'field', placeholder: 'Ou saisis un genre (ex. Rap français)', maxlength: '40' });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') choose(input.value); });
+    openSheet('Genre', h('p', null, track.name),
+      h('ul', { class: 'menu' }, existing.map(g => h('li', null, h('button', { type: 'button', 'aria-current': String(g === track.genre), onclick: () => choose(g) }, (g === track.genre ? '✓ ' : '') + g)))),
+      input, h('div', { class: 'row-btns' }, h('button', { type: 'button', class: 'btn primary', onclick: () => choose(input.value) }, 'Utiliser ce genre')));
   }
 
   function openMoreRemote(track) {
