@@ -131,6 +131,8 @@ function icon(string $name): string {
         'music' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
         'clip' => '<rect x="2" y="5" width="15" height="14" rx="2"/><path d="m17 10 5-3v10l-5-3"/>',
         'lists' => '<path d="M3 6h13M3 12h13M3 18h8"/><path d="m15 15 6 3-6 3z"/>',
+        // Genres musicaux : une étiquette.
+        'genre' => '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
         // Hors musique (podcasts, documentaires, tutoriels) : un micro, la parole plutôt que le son.
         'other' => '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/>',
         'playlist-add' => '<path d="M3 6h13M3 12h13M3 18h8"/><path d="M18 14v8M14 18h8"/>',
@@ -241,6 +243,7 @@ if ($skinVars): ?>
     </div>
     <div class="needle" id="needle" aria-hidden="true"></div>
     <nav class="hub" id="hub" aria-label="Catégories">
+      <button type="button" data-cat="genre" aria-label="Genres" title="Genres"><?php echo icon('genre'); ?><span class="badge" hidden></span></button>
       <button type="button" data-cat="audio" aria-label="Morceaux" title="Morceaux"><?php echo icon('music'); ?><span class="badge" hidden></span></button>
       <button type="button" data-cat="video" aria-label="Clips" title="Clips"><?php echo icon('clip'); ?><span class="badge" hidden></span></button>
       <button type="button" data-cat="list" aria-label="Playlists" title="Playlists"><?php echo icon('lists'); ?><span class="badge" hidden></span></button>

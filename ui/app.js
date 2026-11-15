@@ -43,7 +43,7 @@
 
   // ------------------------------------------------------------------ état
 
-  const CATS = { audio: 'Morceaux', video: 'Clips', list: 'Playlists', other: 'Hors musique' };
+  const CATS = { genre: 'Genres', audio: 'Morceaux', video: 'Clips', list: 'Playlists', other: 'Hors musique' };
   const SORTS = ['recent', 'asc', 'desc'];
   const SORT_LABEL = { recent: 'Récents', asc: 'A → Z', desc: 'Z → A' };
   const state = {
@@ -251,6 +251,7 @@
 
   // Liste complète selon la catégorie, la playlist et le tri (sans recherche).
   function baseItems() {
+    if (state.cat === 'genre' && !state.playlist) return []; // la liste des genres : voir genreItems()
     if (state.cat === 'list' && !state.playlist) {
       // Palette attribuée dans l'ordre des identifiants, indépendante de la
       // recherche et de l'ordre d'affichage. Des fonds clairs gardent le nom
@@ -271,8 +272,9 @@
   // Playlists AUTOMATIQUES par genre (♫) : calculées à partir des genres des
   // titres de ma bibliothèque (donnés par les bases musicales ouvertes, ou
   // choisis à la main), avec les noms de la base. Toujours à jour, lecture
-  // seule, en tête de la liste des playlists. Un genre n'a sa playlist qu'à
-  // partir de 3 titres ; « Inclassable » (artiste inconnu des bases) toujours.
+  // seule, dans leur propre catégorie « Genres » (bouton au-dessus de
+  // « Morceaux ») pour ne pas les mélanger aux playlists. « Inclassable » =
+  // artiste inconnu des bases.
   const GENRE_COLORS = ['#ffb4c2', '#ffa987', '#b9a6ff', '#8fd3ff', '#9ee6b3', '#ffd37a', '#f4a6e0', '#7fe0d4', '#d6c28a',
     '#ff9d9d', '#a9b8ff', '#c7e58c', '#e9b4ff', '#87d2ff', '#ffc999', '#a0e8c8'];
   const UNCLASSIFIED = 'Inclassable';
@@ -283,8 +285,8 @@
     return counts;
   }
   function genreItems() {
-    if (state.cat !== 'list' || state.playlist) return [];
-    return [...genreCounts()].filter(([g, n]) => n >= 3 || g === UNCLASSIFIED)
+    if (state.cat !== 'genre' || state.playlist) return [];
+    return [...genreCounts()]
       .sort((a, b) => (a[0] === UNCLASSIFIED) - (b[0] === UNCLASSIFIED) || b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([g, n]) => ({ kind: 'playlist', id: 'genre:' + g, name: '♫ ' + g, count: n, sortKey: '', virtual: true, genre: g, playlistColor: genreColor(g) }));
   }
@@ -380,12 +382,13 @@
       empty.replaceChildren(h('p', null, 'Aucun titre ne correspond à « ' + q + ' »' + (baseItems().length ? ' ici.' : '.')));
       // On propose de chercher sur le serveur et sur YouTube (l'ex-« trouver
       // ailleurs » de l'interface classique).
-      if (state.cat !== 'list') empty.append(h('button', { type: 'button', class: 'btn primary', onclick: () => openAdd({ query: q }) }, 'Chercher ailleurs'));
+      if (state.cat !== 'list' && state.cat !== 'genre') empty.append(h('button', { type: 'button', class: 'btn primary', onclick: () => openAdd({ query: q }) }, 'Chercher ailleurs'));
       empty.hidden = false;
       return;
     }
     if (!state.items.length) {
-      empty.replaceChildren(h('p', null, state.cat === 'list' && !state.playlist ? 'Aucune playlist pour l\'instant.'
+      empty.replaceChildren(h('p', null, state.cat === 'genre' && !state.playlist ? 'Aucun genre pour l\'instant : le classement des titres est en cours.'
+        : state.cat === 'list' && !state.playlist ? 'Aucune playlist pour l\'instant.'
         : state.playlist ? 'Cette playlist est vide.'
         : 'Rien ici pour l\'instant. Ajoute un titre avec le bouton +.'));
       empty.hidden = false;
@@ -422,7 +425,7 @@
     if (state.playlist) $('deck-back').querySelector('span').textContent = state.playlist.name;
     // Le tri ne s'applique qu'aux titres de la bibliothèque (une playlist
     // garde son ordre, la liste des playlists aussi).
-    $('deck-sorts').hidden = !!state.playlist || state.cat === 'list';
+    $('deck-sorts').hidden = !!state.playlist || state.cat === 'list' || state.cat === 'genre';
     document.querySelectorAll('#deck-sorts button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sort === state.sort)));
     $('deck-plmenu').hidden = !state.playlist;
     updateCount(wheel.front);
@@ -2221,7 +2224,7 @@
     let carried = null;
     try { carried = JSON.parse(sessionStorage.getItem(CARRY_SEARCH) || 'null'); sessionStorage.removeItem(CARRY_SEARCH); } catch (err) {}
     if (!carried || !String(carried.query || '').trim()) return;
-    if (CATS[carried.cat] && carried.cat !== 'list') state.cat = carried.cat;
+    if (CATS[carried.cat] && carried.cat !== 'list' && carried.cat !== 'genre') state.cat = carried.cat;
     searchInput.value = state.query = String(carried.query);
     state.frozen = !!carried.frozen;
     if (!desktop.matches) { app.classList.add('is-searching'); $('search-toggle').setAttribute('aria-expanded', 'true'); }

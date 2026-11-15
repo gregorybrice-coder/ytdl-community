@@ -131,7 +131,11 @@ function ytdl_genre_for_artist(string $artist): array {
     $source = 'musicbrainz';
     if (!$found) { $found = ytdl_genre_wikidata($artist); $source = 'wikidata'; }
     if (!$found) { $genre = YTDL_GENRE_UNCLASSIFIED; $source = 'aucun'; $mbid = null; }
-    else { $genre = ytdl_genre_clean($found['genre']) ?? YTDL_GENRE_UNCLASSIFIED; $mbid = $found['mbid']; }
+    else {
+        $genre = ytdl_genre_clean($found['genre']) ?? YTDL_GENRE_UNCLASSIFIED; $mbid = $found['mbid'];
+        // Déjà connu sous une autre écriture (« Hip-hop » / « Hip hop ») : le nom existant est repris.
+        if ($genre !== YTDL_GENRE_UNCLASSIFIED) $genre = ytdl_genre_existing($genre) ?? $genre;
+    }
     $db->prepare('INSERT OR REPLACE INTO artist_genres (artist_key, artist, genre, source, mbid) VALUES (:k, :a, :g, :s, :m)')
        ->execute([':k' => $key, ':a' => $artist, ':g' => $genre, ':s' => $source, ':m' => $mbid]);
     return [$genre, $source];
@@ -226,4 +230,34 @@ function ytdl_genre_search(string $q, int $limit = 8): array {
     $res = [];
     foreach ($out as $name => $src) { $res[] = ['name' => $name, 'source' => $src]; if (count($res) >= $limit) break; }
     return $res;
+}
+
+
+/**
+ * Fusionne les genres écrits différemment (« Hip-hop » / « Hip hop » / « hip hop ») :
+ * le nom de la liste officielle de MusicBrainz s'il y est, sinon l'écriture la
+ * plus utilisée. Renvoie le nombre de lignes modifiées.
+ */
+function ytdl_genre_merge_duplicates(): int {
+    $db = ytdl_db();
+    $counts = [];
+    foreach ($db->query("SELECT genre, COUNT(*) AS n FROM download_history WHERE genre IS NOT NULL GROUP BY genre")->fetchAll(PDO::FETCH_ASSOC) as $r) $counts[$r['genre']] = (int)$r['n'];
+    foreach ($db->query("SELECT genre, COUNT(*) AS n FROM artist_genres GROUP BY genre")->fetchAll(PDO::FETCH_ASSOC) as $r) $counts[$r['genre']] = ($counts[$r['genre']] ?? 0) + (int)$r['n'];
+    $byKey = [];
+    foreach ($counts as $g => $n) { $k = ytdl_genre_match_key((string)$g); if ($k !== '') $byKey[$k][$g] = $n; }
+    $changed = 0;
+    foreach ($byKey as $key => $spellings) {
+        if (count($spellings) < 2) continue;
+        $vocab = $db->prepare('SELECT name FROM genre_vocab WHERE match_key = :k'); $vocab->execute([':k' => $key]);
+        $canon = $vocab->fetchColumn();
+        if ($canon === false) { arsort($spellings); $canon = (string)array_key_first($spellings); }
+        foreach (array_keys($spellings) as $g) {
+            if ($g === $canon) continue;
+            foreach (['download_history', 'artist_genres'] as $table) {
+                $st = $db->prepare("UPDATE $table SET genre = :c WHERE genre = :g"); $st->execute([':c' => $canon, ':g' => $g]);
+                $changed += $st->rowCount();
+            }
+        }
+    }
+    return $changed;
 }

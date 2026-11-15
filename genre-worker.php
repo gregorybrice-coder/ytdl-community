@@ -55,3 +55,5 @@ while (true) {
     }
     $n++;
 }
+// Écritures différentes d'un même genre (« Hip-hop » / « Hip hop ») : réunies.
+ytdl_genre_merge_duplicates();

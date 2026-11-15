@@ -35,6 +35,11 @@ try {
  check(ytdl_genre_match_key('Hip-hop')===ytdl_genre_match_key('hip hop')&&ytdl_genre_match_key('Électro')===ytdl_genre_match_key('electro')&&ytdl_genre_existing('Genre jamais vu')===null,'Genres comparés sans casse, accents ni ponctuation');
  $db->exec("INSERT OR REPLACE INTO genre_vocab (match_key, name) VALUES ('indierock','Indie rock')");
  check(ytdl_genre_existing('INDIE-rock')==='Indie rock'&&ytdl_genre_search('indie')[0]['name']==='Indie rock','Un genre existant est retrouvé, même écrit autrement');
+ $db->exec("INSERT OR REPLACE INTO genre_vocab (match_key, name) VALUES ('hiphop','Hip hop')");
+ $db->exec("INSERT INTO artist_genres (artist_key, artist, genre, source) VALUES ('a1','A1','Hip-hop','musicbrainz'),('a2','A2','Hip hop','musicbrainz')");
+ ytdl_genre_merge_duplicates();
+ check((int)$db->query("SELECT COUNT(*) FROM artist_genres WHERE genre = 'Hip-hop'")->fetchColumn()===0,'Genres écrits différemment réunis en un seul');
+ $db->exec("DELETE FROM artist_genres");
  check(ytdl_genre_parse('Artiste - Titre (Official Video)','')[0]==='Artiste'&&ytdl_genre_parse('Sans séparateur','Chaîne - Topic')[0]==='Chaîne'&&ytdl_genre_parse('A & B - Titre','')[0]==='A'&&ytdl_genre_same_name('The Beatles','Beatles'),'Artiste extrait du titre, noms d’artistes comparés');
  [$status]=runPhp([$root.'/genre-worker.php']);check($status===0,'Classement des genres : aucun titre à traiter, sortie sans erreur');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');
