@@ -204,6 +204,38 @@ function ytdl_db(): PDO {
     ");
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_library_access_viewer ON library_access(viewer_user_id)');
 
+    // Import de playlist exécuté PAR LE SERVEUR (import-worker.php) : il se
+    // poursuit même si le téléphone s'éteint, passe en arrière-plan ou perd
+    // le réseau. Un travail = une ou plusieurs playlists ; chaque titre est
+    // une ligne dont l'état est lu par l'appli (playlist-import-status.php).
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS import_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status TEXT NOT NULL DEFAULT 'running',
+            worker_pid INTEGER,
+            heartbeat_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            finished_at TEXT,
+            seen INTEGER NOT NULL DEFAULT 0
+        )
+    ");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS import_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id INTEGER NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+            playlist_id INTEGER REFERENCES playlists(id) ON DELETE SET NULL,
+            position INTEGER NOT NULL,
+            artist TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            youtube_url TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            error TEXT,
+            history_id INTEGER
+        )
+    ");
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_import_items_job ON import_items(job_id, status, position)');
+
     // Notation par étoiles (1-5), personnelle à chaque compte — un morceau
     // partagé peut être noté différemment par son propriétaire et par chacun
     // des destinataires, chacun avec ses propres goûts. Sert à pondérer la

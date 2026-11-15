@@ -20,7 +20,7 @@
 </IfModule>
 
 # La configuration et les outils ne sont jamais servis au navigateur.
-<FilesMatch "^(config(?:\.local)?|db|lib|auth|mailer)\.php$|^\.">
+<FilesMatch "^(config(?:\.local)?|db|lib|auth|mailer|import-lib|import-worker|download-start|library-access-lib)\.php$|^\.">
     Require all denied
 </FilesMatch>
 <IfModule mod_alias.c>

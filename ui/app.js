@@ -1645,7 +1645,14 @@
       parts.push(h('p', null, 'YouTube, YouTube Music, Spotify, Deezer ou Apple Music : la playlist doit être publique ou partagée par lien. Elle garde son nom, tous ses titres sont importés. Amazon Music n\'est pas pris en charge.'),
         url, h('div', { class: 'row-btns' }, analyze), drop, status);
     } else {
-      parts.push(h('p', null, 'Import en cours : ' + imp.done + ' / ' + imp.total + '. Tu peux fermer cette fenêtre, il continue en fond.'));
+      imp.listEl = h('ul', { class: 'imp' });
+      parts.push(h('p', null, 'Import en cours : ' + imp.done + ' / ' + imp.total + '. Il continue sur le serveur : tu peux fermer cette fenêtre, quitter l\'appli ou éteindre ton téléphone.'),
+        h('div', { class: 'row-btns' }, h('button', { type: 'button', class: 'btn danger', onclick: async () => {
+          if (!await confirmSheet('Arrêter l\'import', 'Arrêter l\'import ? Les titres déjà importés restent dans ta bibliothèque.', 'Arrêter', true)) { renderImport(); return; }
+          try { await Y.api.json('playlist-import-status.php', { action: 'cancel', id: imp.jobId }); } catch (err) { toast(err.message); }
+          pollImport();
+        } }, 'Arrêter l\'import')), imp.listEl);
+      paintImportList();
     }
 
     if (imp.groups.length) {
@@ -1682,6 +1689,7 @@
       parts.push(list);
     }
     openSheet('Importer une playlist', ...parts);
+    if (imp.running) pollImport(); // feuille ouverte : l'état détaillé des titres est demandé
   }
 
   // Colonnes reconnues comme dans capture.php (titre / artiste / playlist).
@@ -1727,67 +1735,62 @@
     imp.chip.firstChild.textContent = pct + '%';
   }
 
+  // L'import est exécuté PAR LE SERVEUR (import-worker.php) : il continue
+  // même si l'appli passe en arrière-plan, si l'écran s'éteint, si le
+  // téléphone s'éteint ou perd le réseau. Ici on ne fait que le lancer, puis
+  // en suivre l'avancement (pollImport) tant que l'appli est ouverte.
+  const IMPORT_STATUS_LABEL = { pending: 'en attente', running: 'en cours…', done: 'ajouté', duplicate: 'déjà présent' };
+  let impTimer = null;
+
   async function runImport() {
     if (imp.running) return;
-    imp.running = true; imp.done = 0;
-    imp.total = imp.groups.reduce((n, g) => n + g.tracks.length, 0);
+    const groups = imp.groups.map(g => ({ name: g.name, tracks: g.tracks.map(t => ({ artist: t.artist || '', title: t.title || '', youtube_url: t.youtube_url || '' })) }));
+    try {
+      const res = await Y.api.json('playlist-import-start.php', { groups });
+      imp.jobId = res.job_id; imp.total = res.total;
+    } catch (err) { toast(err.message); return; }
+    imp.running = true; imp.done = 0; imp.items = [];
     imp.startBytes = library.usage ? library.usage.total_bytes : null;
-    paintImportChip();
-    const failed = [];
-    for (let gi = 0; gi < imp.groups.length; gi++) {
-      const g = imp.groups[gi];
-      let playlistId = null;
-      try { playlistId = Number((await library.createPlaylist(g.name)).id); }
-      catch (err) { toast('Impossible de créer la playlist « ' + g.name + ' ».'); imp.done += g.tracks.length; paintImportChip(); continue; }
-      for (let ti = 0; ti < g.tracks.length; ti++) {
-        const t = g.tracks[ti];
-        const row = imp.rows.get(gi + ':' + ti) || h('li');
-        const st = row.querySelector('.st') || h('span');
-        row.classList.add('is-active');
-        try {
-          st.textContent = 'recherche…';
-          let url = t.youtube_url || null;
-          if (!url) {
-            const q = [t.artist, t.title].filter(Boolean).join(' ');
-            const first = q ? (await Y.youtubeSearch(q, 1))[0] : null;
-            url = first ? first.url : null;
-          }
-          if (!url) throw new Error('introuvable');
-          const res = await Y.download(url, { audioOnly: true }, (p) => { st.textContent = Math.round(p.percent || 0) + ' %'; });
-          let historyId = res.historyId || null;
-          await library.load();
-          if (res.duplicate) {
-            const match = library.tracks.find(x => x.title === res.title);
-            historyId = match ? match.id : null;
-          }
-          if (!historyId) throw new Error('échec');
-          await library.loadPlaylists();
-          const wanted = Array.from(new Set([...(library.membership[historyId] || []).map(Number), playlistId]));
-          await Y.api.json('playlist-update.php', { action: 'set_membership', history_id: historyId, playlist_ids: wanted });
-          row.classList.add('is-done');
-          st.textContent = res.duplicate ? 'déjà présent' : 'ajouté';
-        } catch (err) {
-          row.classList.add('is-failed');
-          st.textContent = 'introuvable';
-          failed.push(t);
-        }
-        row.classList.remove('is-active');
-        imp.done++;
-        paintImportChip();
-      }
-    }
-    imp.running = false;
-    paintImportChip();
-    paintUsage();
-    await library.loadPlaylists();
-    refreshWheel(true);
-    const ok = imp.total - failed.length;
-    const u = library.usage;
-    const consumed = u && imp.startBytes !== null ? Math.max(0, u.total_bytes - imp.startBytes) : null;
-    const summary = [h('p', null, ok + ' morceau' + (ok > 1 ? 'x' : '') + ' importé' + (ok > 1 ? 's' : '') + ' sur ' + imp.total + (failed.length ? ' (' + failed.length + ' échec' + (failed.length > 1 ? 's' : '') + ')' : '') + '.')];
-    if (u && u.quota_bytes) summary.push(h('p', null, (consumed !== null ? fmtBytes(consumed) + ' consommés — ' : '') + fmtBytes(Math.max(0, u.quota_bytes - u.total_bytes)) + ' restants.'));
-    if (failed.length) summary.push(h('h3', null, 'Introuvables'), h('ul', { class: 'imp' }, failed.map(t => h('li', null, h('span', { class: 'tt' }, h('b', null, t.title), h('i', null, t.artist || ''))))));
     imp.groups = []; imp.rows.clear();
+    paintImportChip();
+    toast('Import lancé : il continue sur le serveur, même écran ou téléphone éteint.', 6000);
+    pollImport();
+  }
+
+  function paintImportList() {
+    if (!imp.listEl || !imp.listEl.isConnected) return;
+    imp.listEl.replaceChildren(...(imp.items || []).map(t => h('li', { class: t.status === 'running' ? 'is-active' : t.status === 'failed' ? 'is-failed' : (t.status === 'pending' ? '' : 'is-done') },
+      h('span', { class: 'tt' }, h('b', null, t.title || '(titre inconnu)'), h('i', null, t.artist || '')),
+      h('span', { class: 'st' }, t.status === 'failed' ? (t.error || 'échec') : (IMPORT_STATUS_LABEL[t.status] || t.status)))));
+  }
+
+  async function pollImport() {
+    clearTimeout(impTimer);
+    const detail = sheet.open && $('sheet-title').textContent === 'Importer une playlist';
+    let data;
+    // Hors réseau : on réessaie sans rien casser, l'import avance sur le serveur.
+    try { data = await Y.api.get('playlist-import-status.php' + (detail ? '?detail=1' : '')); }
+    catch (err) { if (imp.running) impTimer = setTimeout(pollImport, 8000); return; }
+    const job = data.job;
+    if (!job) { imp.running = false; paintImportChip(); return; }
+    imp.jobId = job.id; imp.total = job.total; imp.done = job.done;
+    if (job.items) { imp.items = job.items; paintImportList(); }
+    if (job.status === 'running') {
+      imp.running = true; paintImportChip();
+      impTimer = setTimeout(pollImport, document.hidden ? 15000 : 4000);
+      return;
+    }
+    imp.running = false; paintImportChip();
+    if (job.seen) return;
+    Y.api.json('playlist-import-status.php', { action: 'ack', id: job.id }).catch(() => {});
+    await library.load(); await library.loadPlaylists();
+    refreshWheel(true); paintUsage();
+    const u = library.usage;
+    const consumed = u && imp.startBytes != null ? Math.max(0, u.total_bytes - imp.startBytes) : null;
+    const failed = (job.items || []).filter(t => t.status === 'failed');
+    const summary = [h('p', null, job.ok + ' morceau' + (job.ok > 1 ? 'x' : '') + ' importé' + (job.ok > 1 ? 's' : '') + ' sur ' + job.total + (failed.length ? ' (' + failed.length + ' échec' + (failed.length > 1 ? 's' : '') + ')' : '') + '.')];
+    if (u && u.quota_bytes) summary.push(h('p', null, (consumed !== null ? fmtBytes(consumed) + ' consommés — ' : '') + fmtBytes(Math.max(0, u.quota_bytes - u.total_bytes)) + ' restants.'));
+    if (failed.length) summary.push(h('h3', null, 'Non importés'), h('ul', { class: 'imp' }, failed.map(t => h('li', null, h('span', { class: 'tt' }, h('b', null, t.title || '(titre inconnu)'), h('i', null, t.artist || '')), h('span', { class: 'st' }, t.error || 'échec')))));
     openSheet('Import terminé', ...summary);
   }
 
@@ -2105,6 +2108,7 @@
     paintOptions();
     renderQueue();
     library.startPolling();
+    pollImport(); // import en cours (ou fini pendant que l'appli était fermée)
 
     // Demandes d'accès à ma bibliothèque (et réponses aux miennes) : relevées
     // au démarrage puis toutes les 30 s, comme les partages reçus.

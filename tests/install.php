@@ -19,10 +19,11 @@ try {
  check(is_file(YTDL_DATA_DIR.'/vapid-config.php')&&(fileperms(YTDL_DATA_DIR.'/vapid-config.php')&0077)===0,'Clés neuves avec permissions privées');
  [$status]=runPhp($args);check($status!==0&&(int)$db->query('SELECT COUNT(*) FROM users')->fetchColumn()===1,'Réinitialisation refusée sans changement de compte');
  require $root.'/lib.php';require $root.'/mailer.php';
- foreach(['library_access','track_recommendations'] as $table)check($db->query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='$table'")->fetchColumn()!==false,"Table $table présente sur base neuve");
+ foreach(['library_access','track_recommendations','import_jobs','import_items'] as $table)check($db->query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='$table'")->fetchColumn()!==false,"Table $table présente sur base neuve");
  check(ytdl_detect_playlist_platform('https://youtube.com/playlist?list=PLabc123&si=x')==='youtube','Lien de playlist YouTube reconnu');
  check(ytdl_detect_playlist_platform('https://music.youtube.com/watch?v=abc&list=PLabc123')==='ytmusic','Titre YouTube Music ouvert depuis une playlist reconnu');
  check(ytdl_detect_playlist_platform('https://www.youtube.com/playlist?list=WL')===null&&ytdl_detect_playlist_platform('https://youtube.com.example.org/playlist?list=PLabc')===null,'Listes privées et hôtes détournés refusés');
+ [$status]=runPhp([$root.'/import-worker.php','999']);check($status===0,'Processus d’import : travail inconnu ignoré sans erreur');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');
  file_put_contents(YTDL_DATA_DIR.'/smtp-config.php','<?php return '.var_export(['host'=>'smtp.example.org','port'=>587,'username'=>'example','password'=>'test-only','from'=>'no-reply@example.org'],true).';');
  check(ytdl_smtp_config()['from']==='no-reply@example.org','SMTP privé reconnu sans envoi');
