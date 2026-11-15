@@ -124,7 +124,10 @@ while (!$retry($isCancelled)) {
         }
         $setItem($itemId, $state, null, (int)$historyId);
     } catch (Throwable $e) {
-        $setItem($itemId, 'failed', mb_substr($e->getMessage(), 0, 200));
+        // Vidéo privée, supprimée ou bloquée : aucun téléchargement possible,
+        // ce n'est pas un échec de l'import.
+        $unavailable = preg_match('/vidéo est privée|private video|video unavailable|n.est plus disponible|has been removed|supprimée|indisponible/iu', $e->getMessage());
+        $setItem($itemId, $unavailable ? 'skipped' : 'failed', mb_substr($e->getMessage(), 0, 200));
     }
 }
 

@@ -42,7 +42,8 @@ $counts = $db->prepare(
     "SELECT COUNT(*) AS total,
             SUM(status IN ('done','duplicate')) AS ok,
             SUM(status = 'failed') AS failed,
-            SUM(status IN ('done','duplicate','failed')) AS finished
+            SUM(status = 'skipped') AS skipped,
+            SUM(status IN ('done','duplicate','failed','skipped')) AS finished
      FROM import_items WHERE job_id = :id"
 );
 $counts->execute([':id' => $job['id']]);
@@ -50,7 +51,7 @@ $c = $counts->fetch(PDO::FETCH_ASSOC);
 
 $out = [
     'id' => (int)$job['id'], 'status' => $job['status'], 'seen' => (int)$job['seen'],
-    'total' => (int)$c['total'], 'done' => (int)$c['finished'], 'ok' => (int)$c['ok'], 'failed' => (int)$c['failed'],
+    'total' => (int)$c['total'], 'done' => (int)$c['finished'], 'ok' => (int)$c['ok'], 'failed' => (int)$c['failed'], 'skipped' => (int)$c['skipped'],
 ];
 if (($_GET['detail'] ?? '') === '1' || $job['status'] !== 'running') {
     $it = $db->prepare('SELECT artist, title, status, error FROM import_items WHERE job_id = :id ORDER BY position');

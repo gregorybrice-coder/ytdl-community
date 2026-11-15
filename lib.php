@@ -1072,6 +1072,8 @@ function ytdl_resolve_ytmusic_playlist(string $url, string $platform = 'ytmusic'
         // privées) : rien à télécharger.
         if (preg_match('/^\[(Private|Deleted) video\]$/i', $title)) continue;
         $uploader = ($parts[3] ?? '') !== 'NA' ? ($parts[3] ?? '') : '';
+        // Vidéo privée : YouTube n'en donne ni titre ni chaîne.
+        if ($title === '' && $uploader === '') continue;
         $tracks[] = [
             'artist'      => $uploader,
             'title'       => $title,

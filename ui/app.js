@@ -1739,7 +1739,7 @@
   // même si l'appli passe en arrière-plan, si l'écran s'éteint, si le
   // téléphone s'éteint ou perd le réseau. Ici on ne fait que le lancer, puis
   // en suivre l'avancement (pollImport) tant que l'appli est ouverte.
-  const IMPORT_STATUS_LABEL = { pending: 'en attente', running: 'en cours…', done: 'ajouté', duplicate: 'déjà présent' };
+  const IMPORT_STATUS_LABEL = { pending: 'en attente', running: 'en cours…', done: 'ajouté', duplicate: 'déjà présent', skipped: 'ignorée (indisponible)' };
   let impTimer = null;
 
   async function runImport() {
@@ -1788,7 +1788,8 @@
     const u = library.usage;
     const consumed = u && imp.startBytes != null ? Math.max(0, u.total_bytes - imp.startBytes) : null;
     const failed = (job.items || []).filter(t => t.status === 'failed');
-    const summary = [h('p', null, job.ok + ' morceau' + (job.ok > 1 ? 'x' : '') + ' importé' + (job.ok > 1 ? 's' : '') + ' sur ' + job.total + (failed.length ? ' (' + failed.length + ' échec' + (failed.length > 1 ? 's' : '') + ')' : '') + '.')];
+    const summary = [h('p', null, job.ok + ' morceau' + (job.ok > 1 ? 'x' : '') + ' importé' + (job.ok > 1 ? 's' : '') + ' sur ' + (job.total - (job.skipped || 0)) + (failed.length ? ' (' + failed.length + ' échec' + (failed.length > 1 ? 's' : '') + ')' : '') + '.')];
+    if (job.skipped) summary.push(h('p', null, job.skipped + ' vidéo' + (job.skipped > 1 ? 's' : '') + ' privée' + (job.skipped > 1 ? 's' : '') + ' ou indisponible' + (job.skipped > 1 ? 's' : '') + ' ignorée' + (job.skipped > 1 ? 's' : '') + ' (impossible à télécharger).'));
     if (u && u.quota_bytes) summary.push(h('p', null, (consumed !== null ? fmtBytes(consumed) + ' consommés — ' : '') + fmtBytes(Math.max(0, u.quota_bytes - u.total_bytes)) + ' restants.'));
     if (failed.length) summary.push(h('h3', null, 'Non importés'), h('ul', { class: 'imp' }, failed.map(t => h('li', null, h('span', { class: 'tt' }, h('b', null, t.title || '(titre inconnu)'), h('i', null, t.artist || '')), h('span', { class: 'st' }, t.error || 'échec')))));
     openSheet('Import terminé', ...summary);
