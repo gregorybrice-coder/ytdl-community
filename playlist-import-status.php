@@ -20,8 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = (int)($p['id'] ?? 0);
     if (($p['action'] ?? '') === 'cancel') {
         // Le titre en cours se termine, les suivants ne sont pas lancés.
-        $db->prepare("UPDATE import_jobs SET status = 'done', finished_at = datetime('now') WHERE id = :id AND user_id = :me AND status = 'running'")->execute([':id' => $id, ':me' => $me]);
+        $db->prepare("UPDATE import_jobs SET status = 'done', finished_at = datetime('now') WHERE id = :id AND user_id = :me AND status IN ('running', 'paused')")->execute([':id' => $id, ':me' => $me]);
         $db->prepare("UPDATE import_items SET status = 'failed', error = 'arrêté' WHERE job_id = :id AND status = 'pending' AND job_id IN (SELECT id FROM import_jobs WHERE user_id = :me)")->execute([':id' => $id, ':me' => $me]);
+    } elseif (($p['action'] ?? '') === 'resume') {
+        $st = $db->prepare("UPDATE import_jobs SET status = 'running', heartbeat_at = datetime('now', '-1 hour') WHERE id = :id AND user_id = :me AND status = 'paused'");
+        $st->execute([':id' => $id, ':me' => $me]);
+        if ($st->rowCount() === 1) ytdl_import_spawn($id);
     } elseif (($p['action'] ?? '') === 'ack') {
         $db->prepare('UPDATE import_jobs SET seen = 1 WHERE id = :id AND user_id = :me')->execute([':id' => $id, ':me' => $me]);
     } else {

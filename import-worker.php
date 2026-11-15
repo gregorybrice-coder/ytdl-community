@@ -124,6 +124,15 @@ while (!$retry($isCancelled)) {
         }
         $setItem($itemId, $state, null, (int)$historyId);
     } catch (Throwable $e) {
+        // YouTube refuse la connexion du serveur : inutile de laisser tous les
+        // titres suivants échouer. Le travail se met en pause (le titre sera
+        // refait) ; l'appli propose de renouveler la connexion puis de reprendre.
+        if (preg_match('/cookies ont probablement|connexion pour cette vidéo|not a bot/iu', $e->getMessage())) {
+            $setItem($itemId, 'pending');
+            $retry(fn() => $db->prepare("UPDATE import_jobs SET status = 'paused', worker_pid = NULL WHERE id = :id AND status = 'running'")->execute([':id' => $jobId]));
+            ytdl_send_push($userId, 'Import en pause', 'YouTube demande de renouveler la connexion du serveur : ouvre ytdl pour la renouveler et reprendre.', ['url' => '/ytdl/capture.php']);
+            exit(0);
+        }
         // Vidéo privée, supprimée ou bloquée : aucun téléchargement possible,
         // ce n'est pas un échec de l'import.
         $unavailable = preg_match('/vidéo est privée|private video|video unavailable|n.est plus disponible|has been removed|supprimée|indisponible/iu', $e->getMessage());

@@ -204,6 +204,16 @@ function ytdl_db(): PDO {
     ");
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_library_access_viewer ON library_access(viewer_user_id)');
 
+    // Genre musical de chaque fichier (voir genre-lib.php / genre-worker.php) :
+    // trouvé automatiquement (Deezer, iTunes, mots-clés) ou choisi à la main
+    // (genre_source = 'manuel', jamais écrasé). genre_checked_at : date du
+    // dernier passage du classement.
+    $dhCols = array_column($pdo->query('PRAGMA table_info(download_history)')->fetchAll(), 'name');
+    foreach (['genre' => 'TEXT', 'genre_source' => 'TEXT', 'genre_checked_at' => 'TEXT'] as $col => $type) {
+        if (!in_array($col, $dhCols, true)) $pdo->exec("ALTER TABLE download_history ADD COLUMN $col $type");
+    }
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_download_history_genre ON download_history(genre)');
+
     // Import de playlist exécuté PAR LE SERVEUR (import-worker.php) : il se
     // poursuit même si le téléphone s'éteint, passe en arrière-plan ou perd
     // le réseau. Un travail = une ou plusieurs playlists ; chaque titre est

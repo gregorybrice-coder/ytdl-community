@@ -268,6 +268,21 @@
     return state.playlist ? base.slice() : Y.sortTracks(base, state.sort);
   }
 
+  // Playlists AUTOMATIQUES par genre (♫) : calculées à partir des genres des
+  // titres de ma bibliothèque (trouvés par le serveur, ou choisis à la main),
+  // donc toujours à jour. Lecture seule ; en tête de la liste des playlists.
+  const GENRE_COLORS = ['#ffb4c2', '#ffa987', '#b9a6ff', '#8fd3ff', '#9ee6b3', '#ffd37a', '#f4a6e0', '#7fe0d4', '#d6c28a',
+    '#ff9d9d', '#a9b8ff', '#c7e58c', '#e9b4ff', '#87d2ff', '#ffc999', '#a0e8c8', '#f0d98a', '#b8c4d6', '#c9c9c9'];
+  function genreItems() {
+    if (state.cat !== 'list' || state.playlist) return [];
+    const counts = new Map();
+    library.tracks.forEach(t => { if (t.genre) counts.set(t.genre, (counts.get(t.genre) || 0) + 1); });
+    const order = library.genres || [];
+    return [...counts.keys()].sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).map(g => ({
+      kind: 'playlist', id: 'genre:' + g, name: '♫ ' + g, count: counts.get(g), sortKey: '', virtual: true, genre: g,
+      playlistColor: GENRE_COLORS[Math.max(0, order.indexOf(g)) % GENRE_COLORS.length] }));
+  }
+
   // Bibliothèques d'autres comptes dont j'ai l'accès : des « playlists » en
   // lecture seule au nom du propriétaire, à la suite des miennes.
   function remoteItems() {
@@ -286,7 +301,7 @@
   // Liste montrée par la molette : pendant une recherche, uniquement les
   // titres trouvés (voir searchItems), quel que soit le tri.
   function computeItems() {
-    const base = baseItems().concat(remoteItems());
+    const base = genreItems().concat(baseItems(), remoteItems());
     return state.query.trim() ? searchItems(base, state.query) : base;
   }
 
@@ -319,7 +334,7 @@
       let hits = list.filter(it => it.kind !== 'playlist' && artistMatches(it, ws));
       if (!hits.length) {
         hits = list.filter(it => hasAll(fold(it.kind === 'playlist' ? it.name
-          : (it.title || '') + ' ' + (it.uploader || '') + ' ' + (it.artist || '')), ws));
+          : (it.title || '') + ' ' + (it.uploader || '') + ' ' + (it.artist || '') + ' ' + (it.genre || '')), ws));
       }
       for (const it of hits) {
         const key = (it.kind || '') + ':' + it.id;
@@ -421,13 +436,14 @@
     }
     const tracks = playOrder(t => t.isAudio);
     endSearchAfterPick(item);
-    player.setQueue(tracks, tracks.indexOf(item), { playlistId: state.playlist && !state.playlist.remote ? state.playlist.id : null });
+    player.setQueue(tracks, tracks.indexOf(item), { playlistId: state.playlist && !state.playlist.remote && !state.playlist.virtual ? state.playlist.id : null });
   }
 
   async function openPlaylist(item) {
     try {
-      const tracks = item.remote ? await loadRemoteTracks(item.ownerId, item.filter) : await library.playlistItems(item.id);
-      state.playlist = { id: item.id, name: item.name, tracks, remote: !!item.remote, ownerId: item.ownerId, filter: item.filter };
+      const tracks = item.virtual ? library.tracks.filter(t => t.genre === item.genre)
+        : item.remote ? await loadRemoteTracks(item.ownerId, item.filter) : await library.playlistItems(item.id);
+      state.playlist = { id: item.id, name: item.name, tracks, remote: !!item.remote, ownerId: item.ownerId, filter: item.filter, virtual: !!item.virtual, genre: item.genre };
       state.query = ''; state.frozen = false; beforeSearch = null; $('search-input').value = ''; syncSearchUi();
       refreshWheel(false);
       wheel.scrollTo(0, true);
@@ -659,7 +675,7 @@
     const meta = $('now-meta');
     meta.textContent = '';
     if (track) {
-      meta.append((track.category === 'other' ? 'HORS MUSIQUE' : track.isAudio ? 'MORCEAU' : 'CLIP') + (track.duration ? ' · ' + fmtTime(track.duration) : ''));
+      meta.append((track.category === 'other' ? 'HORS MUSIQUE' : track.isAudio ? 'MORCEAU' : 'CLIP') + (track.duration ? ' · ' + fmtTime(track.duration) : '') + (track.genre ? ' · ' + track.genre.toUpperCase() : ''));
       if (track.shared_by_name) meta.append(' · ', h('span', { class: 'shared' }, 'partagé par ' + track.shared_by_name));
     }
     paintRating(track);
@@ -1103,6 +1119,21 @@
 
   // Titre d'une bibliothèque consultée en lecture seule : on ne peut que
   // l'importer (un lien vers le fichier du propriétaire, sans copie).
+  // Déplace un titre dans un autre genre (par ex. depuis « Inclassable ») ;
+  // il n'est alors plus reclassé automatiquement.
+  function openGenrePicker(track) {
+    const pick = async (g) => {
+      try { await Y.api.json('track-genre.php', { id: track.id, genre: g }); } catch (err) { toast(err.message); return; }
+      track.genre = g;
+      const mine = library.tracks.find(t => t.id === track.id); if (mine) mine.genre = g; // la liste de la bibliothèque aussi
+      closeSheet(); refreshWheel(true);
+      if (shownTrack === track) showNow(track, false);
+      toast('« ' + track.name + ' » est maintenant dans « ' + g + ' »');
+    };
+    openSheet('Genre', h('p', null, track.name), h('ul', { class: 'menu' }, (library.genres || []).map(g =>
+      h('li', null, h('button', { type: 'button', 'aria-current': String(g === track.genre), onclick: () => pick(g) }, (g === track.genre ? '✓ ' : '') + g)))));
+  }
+
   function openMoreRemote(track) {
     const items = [];
     if (!track.isAudio) items.push(h('li', null, h('button', { type: 'button', html: ICON.clip, onclick: () => { closeSheet(); openVideo(track, state.playlist ? state.playlist.tracks.filter(t => !t.isAudio) : [track]); } }, 'Voir le clip')));
@@ -1127,7 +1158,7 @@
     items.push(h('li', null, h('a', { href: Y.api.downloadUrl(track.id), download: '', html: ICON.download }, 'Télécharger le fichier')));
     if (!track.isAudio) items.push(h('li', null, h('button', { type: 'button', html: ICON.clip, onclick: () => { closeSheet(); openVideo(track, library.byCategory('video')); } }, 'Voir le clip')));
     items.push(h('li', null, h('button', { type: 'button', html: ICON.list, onclick: () => openPlaylistPicker(track) }, 'Ajouter à une playlist')));
-    if (state.playlist && state.playlist.tracks.includes(track)) {
+    if (state.playlist && !state.playlist.virtual && state.playlist.tracks.includes(track)) {
       const pl = state.playlist;
       items.push(h('li', null, h('button', { type: 'button', html: ICON.list, onclick: () => removeFromCurrentPlaylist(track, pl) }, 'Retirer de « ' + pl.name + ' »')));
     }
@@ -1136,6 +1167,7 @@
     }
     // Morceau ou clip, à moi ou partagé avec moi (on peut alors le repartager).
     items.push(h('li', null, h('button', { type: 'button', html: ICON.share, onclick: () => openShare(track) }, track._shared ? 'Repartager' : 'Partager')));
+    if (!track._shared) items.push(h('li', null, h('button', { type: 'button', html: ICON.list, onclick: () => openGenrePicker(track) }, 'Genre : ' + (track.genre || 'pas encore classé') + ' — changer')));
     if (boot.isAdmin && !track._shared) items.push(h('li', null, h('button', { type: 'button', html: ICON.edit, onclick: () => openRename(track) }, 'Renommer')));
     items.push(h('li', null, h('button', { type: 'button', class: 'danger', html: ICON.trash, onclick: () => removeTrack(track) }, track._shared ? 'Retirer de mes partages' : 'Supprimer')));
     openSheet(track.name, h('p', null, track.artist || ''), h('ul', { class: 'menu' }, items));
@@ -1555,6 +1587,25 @@
     document.body.append(a); a.click(); a.remove();
   }
 
+  // YouTube refuse la connexion du serveur (cookies expirés) : au lieu de
+  // laisser l'erreur sans issue, n'importe quel compte peut lancer le
+  // renouvellement (cookies-renew.php), puis réessayer.
+  const isCookieError = (msg) => /cookies ont probablement|connexion pour cette vidéo|anti-robot/i.test(msg || '');
+  function renewCookiesBox(onOk) {
+    const out = h('i', { class: 'cookie-note' });
+    const btn = h('button', { type: 'button', class: 'btn primary' }, 'Renouveler la connexion YouTube');
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      out.textContent = 'Vérification auprès de YouTube… (jusqu\'à 2 minutes ; si macOS demande une autorisation sur le Mac, il faut l\'accepter)';
+      try {
+        const res = await Y.api.renewCookies();
+        out.textContent = res.message;
+        if (res.ok) { btn.remove(); if (onOk) onOk(); } else btn.disabled = false;
+      } catch (err) { out.textContent = err.message; btn.disabled = false; }
+    });
+    return h('div', { class: 'cookie-box' }, btn, out);
+  }
+
   async function startJob(url, opts, container, knownTitle) {
     const label = h('span', null, 'Démarrage…');
     const fill = h('i');
@@ -1592,7 +1643,11 @@
     } catch (err) {
       label.textContent = err.message;
       fill.style.background = 'var(--danger)';
-      done();
+      if (isCookieError(err.message)) {
+        // L'erreur reste affichée avec son bouton, le temps de renouveler puis de réessayer.
+        job.running = false;
+        el.append(renewCookiesBox(() => { label.textContent = 'Connexion renouvelée : relance le téléchargement.'; fill.style.background = ''; }));
+      } else done();
     }
   }
 
@@ -1660,7 +1715,14 @@
         url, h('div', { class: 'row-btns' }, analyze), drop, status);
     } else {
       imp.listEl = h('ul', { class: 'imp' });
-      parts.push(h('p', null, 'Import en cours : ' + imp.done + ' / ' + imp.total + '. Il continue sur le serveur : tu peux fermer cette fenêtre, quitter l\'appli ou éteindre ton téléphone.'),
+      if (imp.paused) {
+        parts.push(h('p', null, 'Import en pause (' + imp.done + ' / ' + imp.total + ') : YouTube refuse la connexion du serveur (cookies expirés).'),
+          renewCookiesBox(async () => {
+            try { await Y.api.json('playlist-import-status.php', { action: 'resume', id: imp.jobId }); } catch (err) { toast(err.message); }
+            imp.paused = false; toast('Import repris.'); pollImport();
+          }));
+      }
+      parts.push(h('p', null, imp.paused ? 'Il reprendra tout seul sur le serveur dès la connexion renouvelée.' : 'Import en cours : ' + imp.done + ' / ' + imp.total + '. Il continue sur le serveur : tu peux fermer cette fenêtre, quitter l\'appli ou éteindre ton téléphone.'),
         h('div', { class: 'row-btns' }, h('button', { type: 'button', class: 'btn danger', onclick: async () => {
           if (!await confirmSheet('Arrêter l\'import', 'Arrêter l\'import ? Les titres déjà importés restent dans ta bibliothèque.', 'Arrêter', true)) { renderImport(); return; }
           try { await Y.api.json('playlist-import-status.php', { action: 'cancel', id: imp.jobId }); } catch (err) { toast(err.message); }
@@ -1789,9 +1851,11 @@
     if (!job) { imp.running = false; paintImportChip(); return; }
     imp.jobId = job.id; imp.total = job.total; imp.done = job.done;
     if (job.items) { imp.items = job.items; paintImportList(); }
-    if (job.status === 'running') {
+    imp.paused = job.status === 'paused';
+    if (job.status === 'running' || job.status === 'paused') {
       imp.running = true; paintImportChip();
-      impTimer = setTimeout(pollImport, document.hidden ? 15000 : 4000);
+      impTimer = setTimeout(pollImport, document.hidden || imp.paused ? 15000 : 4000);
+      if (imp.paused && imp.pausedShown !== job.id && !sheet.open) { imp.pausedShown = job.id; renderImport(); }
       return;
     }
     imp.running = false; paintImportChip();
@@ -1805,6 +1869,7 @@
     const summary = [h('p', null, job.ok + ' morceau' + (job.ok > 1 ? 'x' : '') + ' importé' + (job.ok > 1 ? 's' : '') + ' sur ' + (job.total - (job.skipped || 0)) + (failed.length ? ' (' + failed.length + ' échec' + (failed.length > 1 ? 's' : '') + ')' : '') + '.')];
     if (job.skipped) summary.push(h('p', null, job.skipped + ' vidéo' + (job.skipped > 1 ? 's' : '') + ' privée' + (job.skipped > 1 ? 's' : '') + ' ou indisponible' + (job.skipped > 1 ? 's' : '') + ' ignorée' + (job.skipped > 1 ? 's' : '') + ' (impossible à télécharger).'));
     if (u && u.quota_bytes) summary.push(h('p', null, (consumed !== null ? fmtBytes(consumed) + ' consommés — ' : '') + fmtBytes(Math.max(0, u.quota_bytes - u.total_bytes)) + ' restants.'));
+    if (failed.some(t => isCookieError(t.error))) summary.push(renewCookiesBox(() => toast('Connexion renouvelée : relance l\'import de la playlist (les titres déjà présents sont ignorés).', 7000)));
     if (failed.length) summary.push(h('h3', null, 'Non importés'), h('ul', { class: 'imp' }, failed.map(t => h('li', null, h('span', { class: 'tt' }, h('b', null, t.title || '(titre inconnu)'), h('i', null, t.artist || '')), h('span', { class: 'st' }, t.error || 'échec')))));
     openSheet('Import terminé', ...summary);
   }
@@ -2015,6 +2080,7 @@
       h('li', null, h('button', { type: 'button', html: ICON.edit, onclick: () => renamePlaylist(pl) }, 'Renommer')),
       h('li', null, h('button', { type: 'button', class: 'danger', html: ICON.trash, onclick: () => deletePlaylist(pl) }, 'Supprimer la playlist')),
     ];
+    if (pl.virtual) items.splice(2, 2); // playlist automatique : ni renommer ni supprimer
     if (pl.remote) {
       // Bibliothèque d'un autre compte : lecture seule, import ou départ.
       items.splice(2, 2,

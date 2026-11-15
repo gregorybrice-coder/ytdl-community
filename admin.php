@@ -128,6 +128,22 @@ $active = $pdo->query("SELECT * FROM users WHERE status = 'active' ORDER BY id A
     <button type="button" class="approve" id="clean-titles-btn">Nettoyer les titres de la bibliothèque</button>
     <div id="clean-titles-result" style="margin-top:12px;font-size:0.85rem;"></div>
 
+    <h2>Genres musicaux</h2>
+    <p class="empty" style="font-style:normal;">
+      Chaque titre est rangé automatiquement dans un genre (services gratuits
+      Deezer puis iTunes, à défaut mots-clés du titre). Ceux qu'aucun service ne
+      reconnaît vont dans « Inclassable » : chacun peut les déplacer à la main
+      (menu « … » d'un titre › Genre). Les choix manuels ne sont jamais écrasés.
+    </p>
+    <div class="card" style="display:block;">
+      <div id="genres-status" style="font-size:0.85rem;line-height:1.6;white-space:pre-line;">Lecture…</div>
+      <div class="actions" style="margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="approve" id="genres-start">Classer les titres restants</button>
+        <button type="button" class="approve" id="genres-unclassified">Réessayer les « Inclassable »</button>
+        <button type="button" class="reject" id="genres-all">Tout reclasser</button>
+      </div>
+    </div>
+
     <h2>Cookies YouTube</h2>
     <p class="empty" style="font-style:normal;">
       YouTube demande de plus en plus au serveur de prouver qu'il n'est pas un
@@ -158,6 +174,25 @@ $active = $pdo->query("SELECT * FROM users WHERE status = 'active' ORDER BY id A
   </div>
 
   <script>
+    // --- Genres musicaux (admin-genres.php) ---
+    const gStatus = document.getElementById('genres-status');
+    function gPaint(d) {
+      const done = d.total - d.pending;
+      gStatus.textContent = done + ' titre(s) classé(s) sur ' + d.total + (d.pending ? ' — classement en cours (' + d.pending + ' restants)' : ' — tout est classé') + '\n'
+        + d.genres.map(g => g.genre + ' : ' + g.count).join('  ·  ');
+    }
+    async function gCall(action) {
+      const body = new FormData(); if (action) body.append('action', action);
+      try {
+        const res = await fetch('admin-genres.php', { method: action ? 'POST' : 'GET', body: action ? body : undefined, headers: { 'X-Requested-With': 'ytdl-admin' } });
+        gPaint(await res.json());
+      } catch (err) { gStatus.textContent = 'Erreur : ' + err.message; }
+    }
+    document.getElementById('genres-start').addEventListener('click', () => gCall('start'));
+    document.getElementById('genres-unclassified').addEventListener('click', () => gCall('recheck_unclassified'));
+    document.getElementById('genres-all').addEventListener('click', () => { if (confirm('Reclasser TOUS les titres (sauf ceux choisis à la main) ? Cela relance toute la recherche, de longue durée.')) gCall('recheck_all'); });
+    gCall(); setInterval(gCall, 15000);
+
     // --- Cookies YouTube (admin-cookies.php) ---
     const ckStatus = document.getElementById('cookies-status');
     const ckResult = document.getElementById('cookies-result');

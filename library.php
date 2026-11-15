@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/genre-lib.php';
 $user = ytdl_require_login();
 
 header('Content-Type: application/json');
@@ -19,7 +20,7 @@ if (!ytdl_library_volume_mounted()) {
 // ici, la requête reste identique à celle des fichiers partagés plus bas.
 $stmt = ytdl_db()->prepare(
     'SELECT dh.id, dh.title, dh.thumbnail, dh.downloaded_at, dh.audio_only, dh.category, dh.url, dh.uploader, dh.duration_seconds,
-            dh.loudness_lufs, dh.peak_dbfs,
+            dh.loudness_lufs, dh.peak_dbfs, dh.genre,
             COALESCE(tr.rating, 0) AS rating
      FROM download_history dh
      LEFT JOIN track_ratings tr ON tr.history_id = dh.id AND tr.user_id = :rating_user_id
@@ -72,7 +73,7 @@ unset($track);
 // exclu par ce filtre).
 $sharedStmt = ytdl_db()->prepare(
     'SELECT dh.id, dh.title, dh.thumbnail, dh.downloaded_at, dh.audio_only, dh.category, dh.url, dh.uploader, dh.duration_seconds,
-            dh.loudness_lufs, dh.peak_dbfs, u.name AS shared_by_name,
+            dh.loudness_lufs, dh.peak_dbfs, dh.genre, u.name AS shared_by_name,
             COALESCE(tr.rating, 0) AS rating
      FROM library_shares ls
      JOIN download_history dh ON dh.id = ls.history_id
@@ -129,7 +130,12 @@ $attachGain = function (array &$list): void {
 $attachGain($tracks);
 $attachGain($sharedTracks);
 
+// Titres pas encore classés par genre (nouveaux téléchargements, première mise en service) :
+// le classement se fait en arrière-plan, sans retarder cette réponse.
+ytdl_genre_spawn();
+
 echo json_encode([
+    'genres' => ytdl_genre_list(),
     'tracks' => $tracks,
     'shared_tracks' => $sharedTracks,
     'usage' => ytdl_library_usage($user['id']),

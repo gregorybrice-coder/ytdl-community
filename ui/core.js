@@ -102,6 +102,8 @@
       Object.keys(fields).forEach(k => fd.append(k, fields[k]));
       return request(url, { method: 'POST', body: fd });
     },
+    // Renouvelle la connexion YouTube du serveur (voir cookies-renew.php) : ouvert à tous les comptes.
+    renewCookies: () => request('cookies-renew.php', { method: 'POST', headers: { 'X-Requested-With': 'ytdl-app', Accept: 'application/json' } }),
     streamUrl: (id) => 'library-play.php?id=' + encodeURIComponent(id),
     downloadUrl: (id) => 'library-play.php?id=' + encodeURIComponent(id) + '&download=1',
   };
@@ -111,6 +113,7 @@
   const library = Object.assign(emitter(), {
     tracks: [],        // toutes les pistes (les miennes + partagées avec moi)
     usage: null,
+    genres: [],        // liste des genres proposés (voir genre-lib.php)
     playlists: [],
     membership: {},    // history_id -> [playlist_id]
     deleted: new Set(), // titres supprimés ici, voir load()
@@ -130,6 +133,7 @@
         this.tracks = fresh.filter(t => !this.deleted.has(Number(t.id))).map(decorate)
           .sort((a, b) => new Date(b.downloaded_at) - new Date(a.downloaded_at));
         this.usage = data.usage || null;
+        this.genres = data.genres || this.genres || [];
         this.error = null;
       } catch (err) {
         this.error = err.message;

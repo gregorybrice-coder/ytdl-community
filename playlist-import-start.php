@@ -17,7 +17,7 @@ ytdl_maintenance_gate($user, true);
 $db = ytdl_db();
 $me = (int)$user['id'];
 
-$active = $db->prepare("SELECT id FROM import_jobs WHERE user_id = :me AND status = 'running' LIMIT 1");
+$active = $db->prepare("SELECT id FROM import_jobs WHERE user_id = :me AND status IN ('running', 'paused') LIMIT 1");
 $active->execute([':me' => $me]);
 if ($active->fetchColumn() !== false) ytdl_json_error('Un import est déjà en cours : attends sa fin ou arrête-le.', 409);
 

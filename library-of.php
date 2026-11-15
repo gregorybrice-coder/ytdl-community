@@ -28,7 +28,7 @@ if (!$owner) ytdl_json_error('Compte introuvable.', 404);
 
 $stmt = ytdl_db()->prepare(
     "SELECT dh.id, dh.title, dh.thumbnail, dh.downloaded_at, dh.audio_only, dh.category, dh.uploader, dh.duration_seconds,
-            dh.loudness_lufs, dh.peak_dbfs,
+            dh.loudness_lufs, dh.peak_dbfs, dh.genre,
             COALESCE(tr.rating, 0) AS rating,
             EXISTS (SELECT 1 FROM library_shares ls WHERE ls.history_id = dh.id AND ls.shared_with_user_id = :me2) AS imported
      FROM download_history dh
