@@ -13,8 +13,9 @@ $payload = json_decode(file_get_contents('php://input'), true) ?: [];
 $id = (int)($payload['id'] ?? 0);
 $userIds = array_values(array_unique(array_map('intval', $payload['user_ids'] ?? [])));
 
-// Le propriétaire OU un destinataire d'un partage existant peut repartager —
-// mais jamais vers le propriétaire d'origine (qui a déjà le fichier chez lui).
+// Le propriétaire OU un destinataire d'un partage existant peut repartager.
+// Vers le propriétaire d'origine (qui a déjà le fichier chez lui), ce n'est
+// pas un accès mais une recommandation (table track_recommendations).
 $stmt = ytdl_db()->prepare(
     'SELECT user_id, title, library_path, audio_only FROM download_history WHERE id = :id AND library_path IS NOT NULL'
 );
@@ -32,6 +33,9 @@ $trackTitle = $track['title'] ?: 'un fichier';
 $alreadySharedStmt = ytdl_db()->prepare('SELECT shared_with_user_id FROM library_shares WHERE history_id = :id');
 $alreadySharedStmt->execute([':id' => $id]);
 $previouslyShared = array_map('intval', array_column($alreadySharedStmt->fetchAll(), 'shared_with_user_id'));
+$alreadyRecommendedStmt = ytdl_db()->prepare('SELECT 1 FROM track_recommendations WHERE history_id = :id AND recipient_user_id = :owner');
+$alreadyRecommendedStmt->execute([':id' => $id, ':owner' => $ownerId]);
+if ($alreadyRecommendedStmt->fetchColumn() !== false) $previouslyShared[] = $ownerId;
 
 $isOwner = $ownerId === $user['id'];
 $hasAccess = $isOwner;
@@ -56,23 +60,25 @@ try {
     // propriétaire, ou un autre destinataire ayant lui aussi repartagé).
     $db->prepare('DELETE FROM library_shares WHERE history_id = :id AND shared_by_user_id = :actor')
         ->execute([':id' => $id, ':actor' => $user['id']]);
+    $db->prepare('DELETE FROM track_recommendations WHERE history_id = :id AND sender_user_id = :actor')
+        ->execute([':id' => $id, ':actor' => $user['id']]);
 
     if ($userIds) {
         // IN (...) avec des entiers déjà castés : aucune donnée utilisateur
         // brute n'entre dans le SQL, l'échappement standard PDO suffit ici
         // mais on reste explicite avec des placeholders nommés numérotés.
         $placeholders = [];
-        $params = [':self' => $user['id'], ':owner' => $ownerId];
+        $params = [':self' => $user['id']];
         foreach ($userIds as $i => $uid) {
             $key = ':u' . $i;
             $placeholders[] = $key;
             $params[$key] = $uid;
         }
-        // status='active', id != self, id != owner : impossible de se
-        // partager à soi-même, de repartager au propriétaire d'origine, ou de
-        // cibler un compte pas encore approuvé — même en trafiquant la requête.
+        // status='active', id != self : impossible de se partager à soi-même
+        // ou de cibler un compte pas encore approuvé — même en trafiquant la
+        // requête.
         $validStmt = $db->prepare(
-            "SELECT id FROM users WHERE status = 'active' AND id != :self AND id != :owner AND id IN (" . implode(',', $placeholders) . ")"
+            "SELECT id FROM users WHERE status = 'active' AND id != :self AND id IN (" . implode(',', $placeholders) . ")"
         );
         $validStmt->execute($params);
         $validIds = array_column($validStmt->fetchAll(), 'id');
@@ -83,8 +89,12 @@ try {
         $insert = $db->prepare(
             'INSERT OR IGNORE INTO library_shares (history_id, shared_with_user_id, shared_by_user_id) VALUES (:id, :recipient, :actor)'
         );
+        $recommend = $db->prepare(
+            'INSERT OR IGNORE INTO track_recommendations (history_id, recipient_user_id, sender_user_id) VALUES (:id, :recipient, :actor)'
+        );
         foreach ($validIds as $recipientId) {
-            $insert->execute([':id' => $id, ':recipient' => $recipientId, ':actor' => $user['id']]);
+            ((int)$recipientId === $ownerId ? $recommend : $insert)
+                ->execute([':id' => $id, ':recipient' => $recipientId, ':actor' => $user['id']]);
         }
     }
 

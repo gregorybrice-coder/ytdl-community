@@ -270,59 +270,23 @@ body.music-login{display:grid;grid-template-columns:1.1fr 1fr;align-items:center
   .music-app .mini-player-rating { display: none; }
 }
 
-/* Skin Kawaii, mobile : la ligne secondaire (.library-item-title-text — le
-   titre, l'artiste étant repassé devant, voir plus haut) en --text-dim
-   (#b088a8 côté Kawaii, un rose pâle) se distinguait mal du fond clair de
-   la ligne — remonté à --text (la même teinte foncée que l'artiste,
-   #5c3a52) ; la hiérarchie visuelle artiste/titre repose sur la taille et
-   le poids de police (voir plus haut), pas sur un ton plus pâle qui devient
-   illisible ici. Propre à Kawaii (fond très clair) : les autres skins,
-   bien plus sombres, n'ont pas ce souci de contraste pour cette ligne. */
-@media (max-width: 760px) {
-  [data-skin="kawaii"] .music-app .library-item-title-text { color: var(--text); }
-}
-
 /* Titre en lecture ("playing", fond plein --accent/--accent-2), mobile —
    .library-item-artist/.library-item-title-text portent une couleur EXPLICITE
    (--text/--text-dim, voir plus haut), qui prime donc sur l'héritage depuis
    .library-item.playing .library-item-title { color: var(--on-accent) }
-   (capture.php). Même souci sur Sombre (--text-dim clair, illisible sur le
-   fond orange), Clair (--text-dim sombre, illisible sur le fond orange) et
-   Ambre (--text-dim beige grisé, illisible sur le fond orange) — --on-accent
-   est déjà la couleur pensée pour CE contraste précis dans chaque skin
-   (quasi noir en Sombre, quasi blanc en Clair, quasi noir en Ambre) : pas
-   besoin de couleurs à part, juste de la faire gagner ici. Kawaii non
-   listé : --on-accent y vaut déjà --text (voir plus haut), donc déjà bon
-   sans règle dédiée. */
+   (capture.php). --text-dim clair, illisible sur le fond orange : --on-accent
+   (quasi noir) est la couleur pensée pour CE contraste, on la fait gagner. */
 @media (max-width: 760px) {
-  [data-skin="sombre"] .music-app .library-item.playing .library-item-artist,
-  [data-skin="sombre"] .music-app .library-item.playing .library-item-title-text,
   html:not([data-skin]) .music-app .library-item.playing .library-item-artist,
-  html:not([data-skin]) .music-app .library-item.playing .library-item-title-text,
-  [data-skin="clair"] .music-app .library-item.playing .library-item-artist,
-  [data-skin="clair"] .music-app .library-item.playing .library-item-title-text,
-  [data-skin="ambre"] .music-app .library-item.playing .library-item-artist,
-  [data-skin="ambre"] .music-app .library-item.playing .library-item-title-text { color: var(--on-accent); }
+  html:not([data-skin]) .music-app .library-item.playing .library-item-title-text { color: var(--on-accent); }
 }
 
 /* Zébrage (une ligne sur deux) : passé d'un voile transparent
    (rgba(var(--overlay-rgb),X), jamais assez tranché quel que soit X) à une
    vraie couleur solide (--surface, voir capture.php et la règle
    .music-app .library-item:nth-child(even) plus haut dans ce fichier) —
-   plus de scoping mobile/Kawaii nécessaire, --surface est déjà pensée pour
+   plus de scoping mobile nécessaire, --surface est déjà pensée pour
    trancher avec le fond de la carte dans chaque skin. */
-
-/* Skin Kawaii, footer (mini-lecteur) : lecture aléatoire/enchaînement/fondu
-   actifs passaient inaperçus — inactif (.mini-player-shuffle etc, --text-dim
-   = #b088a8, un rose pâle) et actif (.toggle-active, --accent-2 = #b39ddb,
-   un lavande pâle) sont deux pastels de luminosité quasi identique, sans
-   assez d'écart pour distinguer l'état au premier coup d'œil. --success
-   (#7bc99a, vert) tranche nettement avec ces deux tons ET avec le fond rose
-   du mini-lecteur — pas de restriction mobile ici, le footer existe aussi
-   sur desktop et le problème de contraste n'a rien à voir avec la largeur
-   d'écran. */
-[data-skin="kawaii"] .music-app .mini-player-btn.toggle-active,
-[data-skin="kawaii"] .music-app .mini-player-settings-row.toggle-active { color: var(--success); }
 
 /* Réorganisation du footer mobile (mini-lecteur) : la vignette (+ prev/
    next/lecture, voir .mini-player-center-cluster) VRAIMENT au centre du

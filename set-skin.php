@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ytdl_json_error('Méthode non autorisée.', 405);
 }
 
-const YTDL_SKINS = ['sombre', 'clair', 'ambre', 'kawaii', 'sillon', 'orbite', 'platine', 'heros', 'galaxie', 'retro', 'arcade', 'nature', 'muse', 'aurore', 'bauhaus', 'carnet', 'laiton'];
+const YTDL_SKINS = ['sillon', 'orbite', 'platine', 'heros', 'galaxie', 'retro', 'arcade', 'nature', 'muse', 'aurore', 'bauhaus', 'carnet', 'laiton'];
 
 $payload = json_decode(file_get_contents('php://input'), true) ?: [];
 $skin = (string)($payload['skin'] ?? '');

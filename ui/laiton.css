@@ -105,7 +105,6 @@
   filter: drop-shadow(0 2px 0 #3b2410) drop-shadow(0 6px 10px rgba(0, 0, 0, .6));
 }
 .now-meta { color: var(--text-dim); }
-.now-rating button { color: rgba(243, 217, 138, .2); }
 .now-rating button.on { color: #e9c977; text-shadow: 0 0 8px rgba(233, 201, 119, .55); }
 
 .needle { background: var(--lt-copper); height: 6px; border-radius: 3px; box-shadow: 0 0 0 2px #3b2410; }

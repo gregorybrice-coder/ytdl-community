@@ -1,5 +1,14 @@
 # Changements de l’édition communautaire
 
+## Nouveautés — 15 novembre 2026
+
+- **Accès à la bibliothèque d’un autre compte** : un compte peut la demander ; le propriétaire accepte ou refuse (profil › Bibliothèques) et est prévenu par notification push, e-mail et pastille. Une fois accordée, elle apparaît dans les playlists du demandeur, au prénom du propriétaire, en lecture seule : écoute et import de titres sans téléchargement du fichier ni copie (simple lien).
+- **Import de playlist YouTube** : un lien `youtube.com/playlist` (ou une vidéo ouverte depuis une playlist) s’importe avec le nom de la playlist YouTube, jusqu’à 1000 titres ; coller le lien dans « Ajouter » ouvre l’import.
+- **Partage** : le propriétaire d’un titre apparaît dans la liste de partage ; le lui partager le lui recommande (« partagé par … »).
+- **Apparences** : les anciennes apparences en jeux de couleurs (Sombre, Clair, Ambre, Kawaii) sont retirées ; toutes les apparences sont à disque. Étoiles de notation non données : contour net, visible sur tous les fonds. Le clavier du téléphone ne masque plus les fenêtres de saisie, et l’application s’affiche en plein écran sur Android.
+- **Aide** : guide « Voir comment faire » pour l’import de playlist ; une couleur par playlist.
+- **Sécurité** : fichiers cachés, journaux, documentation, scripts et dépendances jamais servis (insensible à la casse) ; notifications push fonctionnelles (client HTTP ajouté) et jamais bloquantes ; scripts en ligne de commande inaccessibles en HTTP.
+
 ## Correctifs de sécurité — 11 novembre 2026
 
 - Page de connexion : les paroles synchronisées, saisies par les utilisateurs, sont affichées comme du texte et plus en HTML (faille XSS visible des visiteurs non connectés).

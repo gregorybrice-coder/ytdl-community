@@ -259,16 +259,71 @@
       if (this.pollTimer) return;
       this.pollTimer = setInterval(async () => {
         if (document.hidden) return;
-        const before = new Set(this.tracks.map(t => t.id));
+        const before = new Map(this.tracks.map(t => [t.id, t.shared_by_name || '']));
         const previousError = this.error;
         await this.load();
         if (this.error || previousError) return;
         const fresh = this.tracks.filter(t => !before.has(t.id));
-        if (!fresh.length) return;
+        // Un de mes titres qu'on vient de me recommander (« partagé par … »).
+        const recommended = this.tracks.filter(t => !t._shared && before.has(t.id) && (t.shared_by_name || '') !== before.get(t.id) && t.shared_by_name);
+        if (!fresh.length && !recommended.length) return;
         const byCat = { audio: 0, video: 0, other: 0 };
         fresh.forEach(t => { byCat[t.category === 'other' ? 'other' : t.isAudio ? 'audio' : 'video']++; });
-        this.emit('news', { tracks: fresh, shared: fresh.filter(t => t._shared), byCat });
+        this.emit('news', { tracks: fresh, shared: fresh.filter(t => t._shared).concat(recommended), byCat });
       }, 25000);
+    },
+  });
+
+  // ------------------------------------------- bibliothèques d'autres comptes
+
+  // Accès en lecture seule à la bibliothèque de quelqu'un, sur demande (voir
+  // library-access.php). Chaque bibliothèque accordée apparaît dans les
+  // playlists sous le prénom du propriétaire ; l'import crée des partages,
+  // jamais de copie de fichier.
+  const access = Object.assign(emitter(), {
+    libs: [],      // bibliothèques que je peux consulter
+    users: [],     // les autres comptes et où j'en suis avec chacun
+    incoming: [],  // demandes reçues (en attente) et accès que j'ai accordés
+    pending: 0,
+    loaded: false,
+
+    async refresh() {
+      let data;
+      try { data = await api.get('library-access.php'); } catch (err) { return null; }
+      const before = { libs: new Set(this.libs.map(l => l.owner_id)), pending: new Set(this.incoming.filter(r => r.status === 'pending').map(r => r.viewer_id)) };
+      this.libs = data.libs || data.libraries || [];
+      this.users = data.users || [];
+      this.incoming = data.incoming || [];
+      this.pending = data.pending_count || 0;
+      const news = {
+        requests: this.incoming.filter(r => r.status === 'pending' && !before.pending.has(r.viewer_id)),
+        granted: this.libs.filter(l => !before.libs.has(l.owner_id)),
+      };
+      const first = !this.loaded;
+      this.loaded = true;
+      // Au premier relevé, les demandes déjà en attente sont signalées aussi
+      // (l'appli vient de s'ouvrir) ; les accès accordés, non.
+      this.emit('change', first ? { requests: this.incoming.filter(r => r.status === 'pending'), granted: [], first: true } : news);
+      return data;
+    },
+
+    async request(ownerId) { await api.json('library-access.php', { action: 'request', owner_id: ownerId }); return this.refresh(); },
+    async respond(viewerId, decision) { await api.json('library-access.php', { action: 'respond', viewer_id: viewerId, decision }); return this.refresh(); },
+    async leave(ownerId) { await api.json('library-access.php', { action: 'leave', owner_id: ownerId }); return this.refresh(); },
+
+    // Titres du propriétaire, en lecture seule. Ceux déjà importés sont repris
+    // tels qu'ils sont dans MA bibliothèque (note, durée…).
+    async tracks(ownerId) {
+      const data = await api.get('library-of.php?owner=' + encodeURIComponent(ownerId));
+      const mine = new Map(library.tracks.map(t => [t.id, t]));
+      return (data.tracks || []).map(t => mine.get(Number(t.id))
+        || decorate(Object.assign({ category: 'music' }, t, { _remote: true, ownerId: Number(ownerId) })));
+    },
+
+    async import(ownerId, ids) {
+      const data = await api.json('library-access-import.php', ids ? { owner_id: ownerId, ids } : { owner_id: ownerId, all: true });
+      await library.load();
+      return data;
     },
   });
 
@@ -305,6 +360,27 @@
     },
   };
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  // Clés VAPID changées (2026-11-11) : un abonnement créé avec l'ancienne clé
+  // ne reçoit plus rien. Si la clé de l'abonnement ne correspond plus à celle
+  // du serveur, on réabonne en silence (la permission est déjà accordée).
+  (async () => {
+    try {
+      if (!api.pushSupported() || Notification.permission !== 'granted' || !BOOT.vapidKey) return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      const cur = sub && sub.options && sub.options.applicationServerKey;
+      if (!cur) return;
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(cur))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      if (b64 === BOOT.vapidKey.replace(/=+$/, '')) return;
+      const oldEndpoint = sub.endpoint;
+      await sub.unsubscribe();
+      api.json('push-unsubscribe.php', { endpoint: oldEndpoint }).catch(() => {});
+      const key = BOOT.vapidKey; const pad = '='.repeat((4 - key.length % 4) % 4);
+      const raw = atob((key + pad).replace(/-/g, '+').replace(/_/g, '/'));
+      const fresh = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from([...raw].map(c => c.charCodeAt(0))) });
+      await api.json('push-subscribe.php', fresh.toJSON());
+    } catch (err) { /* jamais bloquant */ }
+  })();
 
   function decorate(t) {
     const parts = splitArtistTitle(t);
@@ -804,6 +880,6 @@
   window.Ytdl = {
     boot: BOOT, api, ApiError, prefs, deviceId, splitArtistTitle, fmtTime, clamp, emitter,
     normalize: applyGain,
-    library, account, sortTracks, filterTracks, player, lyrics, artistInfo, lastPlayback, download, youtubeSearch, resolvePlaylist,
+    library, access, account, sortTracks, filterTracks, player, lyrics, artistInfo, lastPlayback, download, youtubeSearch, resolvePlaylist,
   };
 })();

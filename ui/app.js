@@ -148,10 +148,13 @@
     },
     render(btn, item, index) {
       btn.textContent = '';
+      btn.classList.toggle('is-playlist', item.kind === 'playlist');
+      if (item.kind === 'playlist') btn.style.setProperty('--playlist-color', item.playlistColor);
+      else btn.style.removeProperty('--playlist-color');
       if (item.kind === 'playlist') {
         btn.append(h('b', null, item.name), h('i', null, item.count + ' titre' + (item.count > 1 ? 's' : '')));
       } else {
-        btn.append(h('b', null, item.name), h('i', null, item._shared ? (item.artist || '—') + ' · partagé' : (item.artist || '—')));
+        btn.append(h('b', null, item.name), h('i', null, item._shared || item.shared_by_name ? (item.artist || '—') + ' · partagé' : (item.artist || '—')));
       }
       btn.classList.toggle('is-match', state.matchSet.has(index));
       const isCurrent = !!(player.track && item.id === player.track.id && item.kind !== 'playlist');
@@ -249,17 +252,34 @@
   // Liste complète selon la catégorie, la playlist et le tri (sans recherche).
   function baseItems() {
     if (state.cat === 'list' && !state.playlist) {
+      // Palette attribuée dans l'ordre des identifiants, indépendante de la
+      // recherche et de l'ordre d'affichage. Des fonds clairs gardent le nom
+      // lisible sur les disques sombres comme sur les apparences claires.
+      const colors = ['#88c9ff', '#ffbb78', '#8de0b0', '#f5a0cb', '#c2adff', '#f2df79',
+        '#78ddd6', '#ff9d94', '#accb78', '#a8b5ff', '#e9ac85', '#dfacf3'];
+      const ordered = library.playlists.slice().sort((a, b) => Number(a.id) - Number(b.id));
+      const byId = new Map(ordered.map((p, i) => [p.id, i < colors.length ? colors[i]
+        : 'hsl(' + ((i * 137.508) % 360).toFixed(2) + ' 72% 77%)']));
       return library.playlists
-        .map(p => ({ kind: 'playlist', id: p.id, name: p.name, count: p.item_count, sortKey: p.name.toLowerCase() }));
+        .map(p => ({ kind: 'playlist', id: p.id, name: p.name, count: p.item_count,
+          sortKey: p.name.toLowerCase(), playlistColor: byId.get(p.id) }));
     }
     const base = state.playlist ? state.playlist.tracks : library.byCategory(state.cat);
     return state.playlist ? base.slice() : Y.sortTracks(base, state.sort);
   }
 
+  // Bibliothèques d'autres comptes dont j'ai l'accès : des « playlists » en
+  // lecture seule au nom du propriétaire, à la suite des miennes.
+  function remoteItems() {
+    if (state.cat !== 'list' || state.playlist) return [];
+    return Y.access.libs.map(l => ({ kind: 'playlist', id: 'lib:' + l.owner_id, name: l.name, count: l.count,
+      sortKey: l.name.toLowerCase(), remote: true, ownerId: l.owner_id, playlistColor: '#cfd6e4' }));
+  }
+
   // Liste montrée par la molette : pendant une recherche, uniquement les
   // titres trouvés (voir searchItems), quel que soit le tri.
   function computeItems() {
-    const base = baseItems();
+    const base = baseItems().concat(remoteItems());
     return state.query.trim() ? searchItems(base, state.query) : base;
   }
 
@@ -394,13 +414,13 @@
     }
     const tracks = playOrder(t => t.isAudio);
     endSearchAfterPick(item);
-    player.setQueue(tracks, tracks.indexOf(item), { playlistId: state.playlist ? state.playlist.id : null });
+    player.setQueue(tracks, tracks.indexOf(item), { playlistId: state.playlist && !state.playlist.remote ? state.playlist.id : null });
   }
 
   async function openPlaylist(item) {
     try {
-      const tracks = await library.playlistItems(item.id);
-      state.playlist = { id: item.id, name: item.name, tracks };
+      const tracks = item.remote ? await Y.access.tracks(item.ownerId) : await library.playlistItems(item.id);
+      state.playlist = { id: item.id, name: item.name, tracks, remote: !!item.remote, ownerId: item.ownerId };
       state.query = ''; state.frozen = false; beforeSearch = null; $('search-input').value = ''; syncSearchUi();
       refreshWheel(false);
       wheel.scrollTo(0, true);
@@ -633,11 +653,11 @@
     meta.textContent = '';
     if (track) {
       meta.append((track.category === 'other' ? 'HORS MUSIQUE' : track.isAudio ? 'MORCEAU' : 'CLIP') + (track.duration ? ' · ' + fmtTime(track.duration) : ''));
-      if (track._shared && track.shared_by_name) meta.append(' · ', h('span', { class: 'shared' }, 'partagé par ' + track.shared_by_name));
+      if (track.shared_by_name) meta.append(' · ', h('span', { class: 'shared' }, 'partagé par ' + track.shared_by_name));
     }
     paintRating(track);
     const dl = $('act-download');
-    if (track) dl.href = Y.api.downloadUrl(track.id); else dl.removeAttribute('href');
+    if (track && !track._remote) dl.href = Y.api.downloadUrl(track.id); else dl.removeAttribute('href');
     document.querySelectorAll('.now-actions .ib, .now-rating button').forEach(b => { b.style.visibility = track ? '' : 'hidden'; });
     fitTitle();
     paintLabel(track);
@@ -1017,6 +1037,7 @@
   $('act-more').addEventListener('click', () => shownTrack && openMore(shownTrack));
 
   async function openPlaylistPicker(track) {
+    if (track._remote) { toast('Importe d’abord ce titre dans ta bibliothèque.'); return; }
     const body = openSheet('Playlists', h('p', { class: 'empty' }, 'Chargement…'));
     await library.loadPlaylists();
     const current = new Set((library.membership[track.id] || []).map(Number));
@@ -1043,6 +1064,7 @@
   }
 
   async function openShare(track) {
+    if (track._remote) { toast('Importe d’abord ce titre dans ta bibliothèque.'); return; }
     const body = openSheet(track._shared ? 'Repartager' : 'Partager', h('p', { class: 'empty' }, 'Chargement…'));
     let users;
     try { users = await library.users(track); } catch (err) { body.replaceChildren(h('p', null, err.message)); return; }
@@ -1065,7 +1087,28 @@
       h('div', { class: 'row-btns' }, save));
   }
 
+  // Titre d'une bibliothèque consultée en lecture seule : on ne peut que
+  // l'importer (un lien vers le fichier du propriétaire, sans copie).
+  function openMoreRemote(track) {
+    const items = [];
+    if (!track.isAudio) items.push(h('li', null, h('button', { type: 'button', html: ICON.clip, onclick: () => { closeSheet(); openVideo(track, state.playlist ? state.playlist.tracks.filter(t => !t.isAudio) : [track]); } }, 'Voir le clip')));
+    items.push(h('li', null, h('button', { type: 'button', html: ICON.download, onclick: () => importTracks(track.ownerId, [track.id], 'Importé dans ta bibliothèque') }, 'Importer dans ma bibliothèque')));
+    openSheet(track.name, h('p', null, (track.artist || '') + ' · bibliothèque de ' + (state.playlist ? state.playlist.name : '') + ' (lecture seule)'), h('ul', { class: 'menu' }, items));
+  }
+
+  async function importTracks(ownerId, ids, doneText) {
+    try {
+      const res = await Y.access.import(ownerId, ids);
+      closeSheet();
+      // La playlist affichée reprend les titres tels qu'ils sont chez moi.
+      if (state.playlist && state.playlist.remote) { const pl = state.playlist; pl.tracks = await Y.access.tracks(ownerId); }
+      refreshWheel(true); paintUsage();
+      toast(ids ? doneText : res.imported + ' titre' + (res.imported > 1 ? 's' : '') + ' importé' + (res.imported > 1 ? 's' : '') + ' dans ta bibliothèque');
+    } catch (err) { toast(err.message); }
+  }
+
   function openMore(track) {
+    if (track._remote) { openMoreRemote(track); return; }
     const items = [];
     items.push(h('li', null, h('a', { href: Y.api.downloadUrl(track.id), download: '', html: ICON.download }, 'Télécharger le fichier')));
     if (!track.isAudio) items.push(h('li', null, h('button', { type: 'button', html: ICON.clip, onclick: () => { closeSheet(); openVideo(track, library.byCategory('video')); } }, 'Voir le clip')));
@@ -1162,16 +1205,12 @@
     { id: 'nature', label: 'Nature', ready: true },
     { id: 'muse', label: 'Muse', ready: true },
     { id: 'retro', label: 'Néo-rétro', swatch: 'linear-gradient(180deg, #ffb703 0 25%, #fb8500 25% 50%, #ff5d8f 50% 75%, #2ec4b6 75%)', ready: true },
-    { id: 'sombre', label: 'Sombre', swatch: 'linear-gradient(135deg, #101010, #ff844b)', classic: true },
-    { id: 'clair', label: 'Clair', swatch: 'linear-gradient(135deg, #f4f6fb, #d1602a)', classic: true },
-    { id: 'ambre', label: 'Ambre', swatch: 'linear-gradient(135deg, #2b1d10, #ffb347)', classic: true },
-    { id: 'kawaii', label: 'Kawaii', swatch: 'linear-gradient(135deg, #fff0f6, #ff9fbb)', classic: true },
   ];
 
   // Nouveautés annoncées par le serveur (table notifications) : l'avatar
   // brille tant qu'elles n'ont pas été vues, comme dans l'interface classique.
   const pendingNews = (boot.notifications || []).slice();
-  function paintPending() { $('profile-btn').classList.toggle('is-pending', pendingNews.length > 0); }
+  function paintPending() { $('profile-btn').classList.toggle('is-pending', pendingNews.length > 0 || Y.access.pending > 0); }
   paintPending();
 
   $('profile-btn').addEventListener('click', openProfile);
@@ -1267,6 +1306,11 @@
         h('div', { class: 'storage-rows' }, row('Morceaux', u.audio_bytes, u.audio_count), row('Clips', u.video_bytes, u.video_count), row('Hors musique', u.other_bytes, u.other_count)));
     }
 
+    // Bibliothèques des autres comptes : demandes envoyées et reçues.
+    const accessBox = h('div', null, h('p', { class: 'empty' }, 'Chargement…'));
+    parts.push(h('h3', null, 'Bibliothèques'), accessBox);
+    Y.access.refresh().then(() => paintAccessBox(accessBox));
+
     // Apparence : aperçu de l'actuelle, la galerie complète s'ouvre à part.
     const currentSkin = SKINS.find(s => s.id === SKIN) || SKINS[0];
     parts.push(h('h3', null, 'Apparence'), h('button', { type: 'button', class: 'skin-current', onclick: openSkinGallery },
@@ -1281,6 +1325,39 @@
     parts.push(h('h3', null, 'Compte'), h('ul', { class: 'menu' }, links));
     openSheet(boot.name, ...parts);
   }
+  // Rubrique « Bibliothèques » du profil : accepter ou refuser les demandes
+  // reçues, retirer un accès, demander l'accès à quelqu'un d'autre.
+  function paintAccessBox(box) {
+    const A = Y.access;
+    const act = (label, run, cls) => h('li', null, h('button', { type: 'button', class: cls || '', onclick: async (e) => {
+      e.currentTarget.disabled = true;
+      try { await run(); } catch (err) { toast(err.message); }
+      paintAccessBox(box); paintPending();
+      if (state.cat === 'list' && !state.playlist) refreshWheel(true);
+    } }, label));
+    const parts = [];
+    const pendingIn = A.incoming.filter(r => r.status === 'pending');
+    const grantedIn = A.incoming.filter(r => r.status === 'approved');
+    if (pendingIn.length) {
+      parts.push(h('p', null, 'Demandes reçues : elles verront ta bibliothèque en lecture seule.'),
+        h('ul', { class: 'menu' }, pendingIn.flatMap(r => [
+          act('Accepter ' + r.name, () => A.respond(r.viewer_id, 'approve')),
+          act('Refuser ' + r.name, () => A.respond(r.viewer_id, 'deny'), 'danger')])));
+    }
+    if (grantedIn.length) {
+      parts.push(h('p', null, 'Ont accès à ta bibliothèque (lecture seule) :'),
+        h('ul', { class: 'menu' }, grantedIn.map(r => act('Retirer l\'accès de ' + r.name, () => A.respond(r.viewer_id, 'revoke'), 'danger'))));
+    }
+    const others = A.users.map(u => {
+      if (u.state === 'approved') return act('Bibliothèque de ' + u.name + ' : accordée (ne plus suivre)', () => A.leave(u.id));
+      if (u.state === 'pending') return act('Demande envoyée à ' + u.name + ' (annuler)', () => A.leave(u.id));
+      return act('Demander l\'accès à la bibliothèque de ' + u.name, async () => { await A.request(u.id); toast('Demande envoyée à ' + u.name); });
+    });
+    parts.push(h('p', null, 'Consulter la bibliothèque de quelqu\'un :'),
+      others.length ? h('ul', { class: 'menu' }, others) : h('p', { class: 'empty' }, 'Personne d\'autre pour l\'instant.'));
+    box.replaceChildren(...parts);
+  }
+
   function skinPreview(id) { return 'ui/skins/previews/' + id + '.jpg?v=10'; }
 
   // Galerie des apparences : vraies captures d'écran (ui/skins/previews/),
@@ -1291,21 +1368,17 @@
       // Enregistré sur le compte (tous les appareils) avant de changer de page.
       try { await Y.account.setSkin(s.id); } catch (err) { toast(err.message); return; }
       prefs.set('ytdl_skin', s.id);
-      // La recherche en cours suit vers la nouvelle apparence (pas vers
-      // l'interface classique, qui ne la connaît pas).
+      // La recherche en cours suit vers la nouvelle apparence.
       try {
-        if (state.query.trim() && !s.classic) sessionStorage.setItem(CARRY_SEARCH, JSON.stringify({ query: state.query, frozen: state.frozen, cat: state.cat }));
+        if (state.query.trim()) sessionStorage.setItem(CARRY_SEARCH, JSON.stringify({ query: state.query, frozen: state.frozen, cat: state.cat }));
         else sessionStorage.removeItem(CARRY_SEARCH);
       } catch (err) {}
-      window.location.href = s.classic ? 'capture.php' : s.id + '.php';
+      window.location.href = s.id + '.php';
     };
     const card = (s) => h('button', { type: 'button', class: 'skin-card', 'aria-current': String(s.id === SKIN), onclick: () => pick(s) },
       h('img', { src: skinPreview(s.id), alt: 'Aperçu de l\'apparence ' + s.label, loading: 'lazy' }),
       h('span', null, s.label));
-    const fresh = SKINS.filter(s => !s.classic), classic = SKINS.filter(s => s.classic);
-    openSheet('Apparence',
-      h('h3', null, 'Nouvelles interfaces'), h('div', { class: 'skin-gallery' }, fresh.map(card)),
-      h('h3', null, 'Interface classique'), h('div', { class: 'skin-gallery' }, classic.map(card)));
+    openSheet('Apparence', h('div', { class: 'skin-gallery' }, SKINS.map(card)));
     sheet.classList.add('is-wide');
     sheet.addEventListener('close', () => sheet.classList.remove('is-wide'), { once: true });
   }
@@ -1323,6 +1396,9 @@
 
   // ------------------------------------------------------- ajouter un titre
 
+  // Lien d'une playlist YouTube partagée (et non d'une vidéo, même ouverte
+  // depuis une playlist) : il part vers l'import de playlist.
+  const PLAYLIST_LINK = /^https?:\/\/(?:www\.|m\.|music\.)?youtube\.com\/playlist\?[^\s]*list=[\w-]+/i;
   const YT_URL = /https?:\/\/(?:www\.|m\.|music\.)?(?:youtube\.com\/(?:watch\?[^\s]*v=|shorts\/)|youtu\.be\/)[\w-]+[^\s]*/gi;
   const preview = new Audio();
   let previewBtn = null, previewTimer = 0;
@@ -1404,6 +1480,7 @@
     const go = async () => {
       const v = input.value.trim(); if (!v) return;
       stopPreview();
+      if (PLAYLIST_LINK.test(v)) { openImport(v); return; }
       const urls = v.match(YT_URL);
       if (urls) { elsewhere.replaceChildren(); showUrls([...new Set(urls)]); return; }
       const seq = ++searchSeq;
@@ -1445,7 +1522,7 @@
       } catch (err) { results.replaceChildren(h('li', null, h('span', { class: 'tt' }, h('i', null, err.message)))); }
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
-    input.addEventListener('paste', () => setTimeout(() => { if (input.value.match(YT_URL)) go(); }, 0));
+    input.addEventListener('paste', () => setTimeout(() => { if (input.value.match(YT_URL) || PLAYLIST_LINK.test(input.value.trim())) go(); }, 0));
     jobs.forEach(j => jobsEl.append(j.el));
     openSheet('Ajouter', input,
       h('div', { class: 'row-btns' },
@@ -1525,23 +1602,25 @@
   // ------------------------------------------------------ import de playlist
 
   // Même déroulé que setupPlaylistImport() de capture.php : on analyse un
-  // lien public (Spotify, Deezer, YouTube Music, Apple Music) ou un CSV, on
+  // lien public (YouTube, YouTube Music, Spotify, Deezer, Apple Music) ou un CSV, on
   // crée une playlist locale par groupe, puis chaque titre est cherché sur
   // YouTube, téléchargé en MP3 et rangé dans sa playlist. L'import tourne en
   // fond : la feuille peut être fermée, une pastille montre l'avancement.
   const imp = { groups: [], running: false, done: 0, total: 0, rows: new Map(), startBytes: null, chip: null };
 
-  function openImport() {
-    if (imp.running || imp.groups.length) { renderImport(); return; }
+  // url : lien déjà collé (feuille « Ajouter »), analysé tout de suite.
+  function openImport(url) {
+    if (url && !imp.running) imp.prefill = url;
     renderImport();
   }
 
   function renderImport() {
     const status = h('p', null, '');
-    const parts = [];
+    const parts = [h('button', { type: 'button', class: 'ytdl-guide-trigger', 'data-playlist-guide': '' }, '▷ Voir comment faire')];
     if (!imp.running) {
-      const url = h('input', { class: 'field', placeholder: 'https://open.spotify.com/playlist/…', autocomplete: 'off' });
+      const url = h('input', { class: 'field', placeholder: 'https://www.youtube.com/playlist?list=…', autocomplete: 'off' });
       const analyze = h('button', { type: 'button', class: 'btn primary' }, 'Analyser');
+      if (imp.prefill) { url.value = imp.prefill; imp.prefill = null; imp.groups = []; imp.rows.clear(); setTimeout(() => analyze.click(), 0); }
       analyze.addEventListener('click', async () => {
         if (!url.value.trim()) { url.focus(); return; }
         analyze.disabled = true; status.textContent = 'Analyse de la playlist…';
@@ -1563,7 +1642,7 @@
       ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('is-over'); }));
       ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('is-over'); }));
       drop.addEventListener('drop', e => onFile(e.dataTransfer.files && e.dataTransfer.files[0]));
-      parts.push(h('p', null, 'Spotify, Deezer, YouTube Music ou Apple Music : la playlist doit être publique. Amazon Music n\'est pas pris en charge.'),
+      parts.push(h('p', null, 'YouTube, YouTube Music, Spotify, Deezer ou Apple Music : la playlist doit être publique ou partagée par lien. Elle garde son nom, tous ses titres sont importés. Amazon Music n\'est pas pris en charge.'),
         url, h('div', { class: 'row-btns' }, analyze), drop, status);
     } else {
       parts.push(h('p', null, 'Import en cours : ' + imp.done + ' / ' + imp.total + '. Tu peux fermer cette fenêtre, il continue en fond.'));
@@ -1913,11 +1992,24 @@
     const pl = state.playlist; if (!pl) return;
     const audio = pl.tracks.filter(t => t.isAudio);
     const items = [
-      h('li', null, h('button', { type: 'button', html: ICON.play, onclick: () => { closeSheet(); if (player.shuffle) player.setShuffle(false); if (audio.length) player.setQueue(audio, 0, { playlistId: pl.id }); } }, 'Tout lire')),
-      h('li', null, h('button', { type: 'button', html: ICON.shuffle, onclick: () => { closeSheet(); player.setShuffle(true); if (audio.length) { const i = Math.floor(Math.random() * audio.length); player.setQueue(audio, i, { playlistId: pl.id }); } } }, 'Lecture aléatoire')),
+      h('li', null, h('button', { type: 'button', html: ICON.play, onclick: () => { closeSheet(); if (player.shuffle) player.setShuffle(false); if (audio.length) player.setQueue(audio, 0, { playlistId: pl.remote ? null : pl.id }); } }, 'Tout lire')),
+      h('li', null, h('button', { type: 'button', html: ICON.shuffle, onclick: () => { closeSheet(); player.setShuffle(true); if (audio.length) { const i = Math.floor(Math.random() * audio.length); player.setQueue(audio, i, { playlistId: pl.remote ? null : pl.id }); } } }, 'Lecture aléatoire')),
       h('li', null, h('button', { type: 'button', html: ICON.edit, onclick: () => renamePlaylist(pl) }, 'Renommer')),
       h('li', null, h('button', { type: 'button', class: 'danger', html: ICON.trash, onclick: () => deletePlaylist(pl) }, 'Supprimer la playlist')),
     ];
+    if (pl.remote) {
+      // Bibliothèque d'un autre compte : lecture seule, import ou départ.
+      items.splice(2, 2,
+        h('li', null, h('button', { type: 'button', html: ICON.download, onclick: async () => {
+          const ok = await confirmSheet('Tout importer', 'Importer les ' + pl.tracks.length + ' titres de la bibliothèque de ' + pl.name + ' dans la tienne ? Aucun fichier n\'est copié : ce sont des liens vers les siens.', 'Importer', false);
+          if (ok) importTracks(pl.ownerId, null);
+        } }, 'Tout importer (' + pl.tracks.length + ')')),
+        h('li', null, h('button', { type: 'button', class: 'danger', html: ICON.trash, onclick: async () => {
+          const ok = await confirmSheet('Quitter', 'Ne plus consulter la bibliothèque de ' + pl.name + ' ? Les titres déjà importés restent chez toi.', 'Quitter', true);
+          if (!ok) return;
+          try { await Y.access.leave(pl.ownerId); state.playlist = null; refreshWheel(false); toast('Bibliothèque retirée de tes playlists'); } catch (err) { toast(err.message); }
+        } }, 'Ne plus suivre cette bibliothèque')));
+    }
     openSheet(pl.name, h('p', null, pl.tracks.length + ' titre' + (pl.tracks.length > 1 ? 's' : '')), h('ul', { class: 'menu' }, items));
   });
 
@@ -2013,6 +2105,21 @@
     paintOptions();
     renderQueue();
     library.startPolling();
+
+    // Demandes d'accès à ma bibliothèque (et réponses aux miennes) : relevées
+    // au démarrage puis toutes les 30 s, comme les partages reçus.
+    Y.access.on('change', (news) => {
+      paintPending();
+      if (news.requests.length) {
+        const who = news.requests.map(r => r.name).join(', ');
+        // À l'ouverture de l'appli, après le message « Reprendre ».
+        setTimeout(() => toast(who + ' demande l’accès à ta bibliothèque.', 9000, { label: 'Voir', run: openProfile }), news.first ? 6000 : 0);
+      }
+      if (news.granted.length) toast(news.granted.map(l => l.name).join(', ') + ' t’a ouvert sa bibliothèque : elle est dans tes playlists.', 7000);
+      if (news.granted.length && state.cat === 'list' && !state.playlist) refreshWheel(true);
+    });
+    Y.access.refresh();
+    setInterval(() => { if (!document.hidden) Y.access.refresh(); }, 30000);
 
     // Liens reçus par le partage natif du téléphone : directement proposés
     // au téléchargement. L'adresse est nettoyée pour qu'un rechargement ne

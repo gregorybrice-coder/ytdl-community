@@ -12,14 +12,20 @@ $asDownload = ($_GET['download'] ?? '0') === '1';
 // Propriétaire OU destinataire d'un partage — jamais vérifié après coup :
 // empêche un compte d'accéder au fichier d'un autre en devinant/énumérant
 // les id, y compris pour un fichier jamais partagé avec lui.
+// Accès par autorisation de bibliothèque (library_access) : écoute seulement,
+// jamais le téléchargement du fichier — pour l'avoir, il faut l'importer.
+$viewerClause = $asDownload ? '' : "OR EXISTS (SELECT 1 FROM library_access la WHERE la.owner_user_id = dh.user_id AND la.viewer_user_id = :user_id3 AND la.status = 'approved')";
 $stmt = ytdl_db()->prepare(
-    'SELECT library_path, title FROM download_history dh
+    "SELECT library_path, title FROM download_history dh
      WHERE dh.id = :id AND (
         dh.user_id = :user_id
         OR EXISTS (SELECT 1 FROM library_shares ls WHERE ls.history_id = dh.id AND ls.shared_with_user_id = :user_id2)
-     )'
+        $viewerClause
+     )"
 );
-$stmt->execute([':id' => $id, ':user_id' => $user['id'], ':user_id2' => $user['id']]);
+$params = [':id' => $id, ':user_id' => $user['id'], ':user_id2' => $user['id']];
+if (!$asDownload) $params[':user_id3'] = $user['id'];
+$stmt->execute($params);
 $row = $stmt->fetch();
 $stmt = null; // libère la base avant une diffusion qui peut durer des minutes
 $libraryPath = $row['library_path'] ?? null;

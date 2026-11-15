@@ -40,6 +40,7 @@ function ytdl_send_push(int $userId, string $title, string $body, array $extra =
             'privateKey' => YTDL_VAPID_PRIVATE_KEY,
         ],
     ];
+    try {
     $webPush = new \Minishlink\WebPush\WebPush($auth);
     $payload = json_encode(array_merge(['title' => $title, 'body' => $body], $extra));
 
@@ -56,13 +57,23 @@ function ytdl_send_push(int $userId, string $title, string $body, array $extra =
     }
 
     foreach ($webPush->flush() as $report) {
-        if ($report->isSubscriptionExpired()) {
+        // Expiré (404/410) ou créé avec une autre clé VAPID (Apple :
+        // VapidPkHashMismatch, FCM : 403) : l'abonnement ne recevra plus rien.
+        $resp = $report->getResponse();
+        $wrongKey = $resp && in_array($resp->getStatusCode(), [400, 403], true)
+            && stripos((string) $resp->getBody(), 'mismatch') !== false;
+        if ($report->isSubscriptionExpired() || $wrongKey) {
             $endpoint = $report->getRequest()->getUri()->__toString();
             $match = array_filter($subs, fn($s) => $s['endpoint'] === $endpoint);
             foreach ($match as $s) {
                 $deleteStale->execute([':id' => $s['id']]);
             }
         }
+    }
+    } catch (\Throwable $e) {
+        // Jamais bloquant : un partage ne doit pas échouer à cause du push
+        // (avant le 2026-11-11, l'absence de client HTTP faisait planter ici).
+        error_log('ytdl_send_push : ' . $e->getMessage());
     }
 }
 
@@ -934,8 +945,27 @@ function ytdl_canonical_playlist_url(string $platform, string $url): ?string {
     if ($platform === 'ytmusic' && ytdl_url_host_is($url, 'music.youtube.com')) {
         parse_str((string)parse_url(trim($url), PHP_URL_QUERY), $query);
         $list = is_string($query['list'] ?? null) ? $query['list'] : '';
-        if (parse_url(trim($url), PHP_URL_PATH) === '/playlist' && preg_match('#^[A-Za-z0-9_-]+$#', $list)) {
+        // /playlist?list=… ou /watch?v=…&list=… (un titre ouvert depuis la playlist).
+        $path = parse_url(trim($url), PHP_URL_PATH);
+        if (in_array($path, ['/playlist', '/watch'], true) && preg_match('#^[A-Za-z0-9_-]+$#', $list)) {
             return 'https://music.youtube.com/playlist?list=' . $list;
+        }
+    }
+    // YouTube « classique » : lien d'une playlist partagée, ou d'une vidéo
+    // ouverte depuis une playlist (watch?v=…&list=…), y compris en version
+    // mobile ou raccourcie. « WL » (à regarder plus tard) et « LL » (vidéos
+    // aimées) sont toujours privées : pas la peine d'essayer.
+    if ($platform === 'youtube') {
+        $host = strtolower((string)parse_url(trim($url), PHP_URL_HOST));
+        $path = (string)parse_url(trim($url), PHP_URL_PATH);
+        if (ytdl_url_host_is($url, 'youtube.com') || ytdl_url_host_is($url, 'm.youtube.com')
+            || ($host === 'youtu.be' && ytdl_url_host_is($url, 'youtu.be'))) {
+            parse_str((string)parse_url(trim($url), PHP_URL_QUERY), $query);
+            $list = is_string($query['list'] ?? null) ? $query['list'] : '';
+            $pathOk = $host === 'youtu.be' || in_array($path, ['/playlist', '/watch'], true);
+            if ($pathOk && preg_match('#^[A-Za-z0-9_-]+$#', $list) && !in_array($list, ['WL', 'LL'], true)) {
+                return 'https://www.youtube.com/playlist?list=' . $list;
+            }
         }
     }
     if ($platform === 'apple' && ytdl_url_host_is($url, 'music.apple.com')) {
@@ -954,6 +984,7 @@ function ytdl_detect_playlist_platform(string $url): ?string {
     if (preg_match('#open\.spotify\.com/(?:[a-zA-Z-]+/)?playlist/([A-Za-z0-9]+)#i', $url)) return 'spotify';
     if (preg_match('#deezer\.(com|page\.link)/.*?playlist[/:](\d+)#i', $url) || preg_match('#deezer\.com/playlist/(\d+)#i', $url)) return 'deezer';
     if (ytdl_canonical_playlist_url('ytmusic', $url) !== null) return 'ytmusic';
+    if (ytdl_canonical_playlist_url('youtube', $url) !== null) return 'youtube';
     if (ytdl_canonical_playlist_url('apple', $url) !== null) return 'apple';
     return null;
 }
@@ -964,10 +995,11 @@ function ytdl_resolve_external_playlist(string $url): array {
     switch ($platform) {
         case 'deezer':  return ytdl_resolve_deezer_playlist($url);
         case 'ytmusic': return ytdl_resolve_ytmusic_playlist($url);
+        case 'youtube': return ytdl_resolve_ytmusic_playlist($url, 'youtube');
         case 'spotify': return ytdl_resolve_spotify_playlist($url);
         case 'apple':   return ytdl_resolve_apple_playlist($url);
         default:
-            return ['error' => "Lien non reconnu — colle un lien de playlist publique Spotify, Deezer, YouTube Music ou Apple Music."];
+            return ['error' => "Lien non reconnu — colle un lien de playlist publique YouTube, YouTube Music, Spotify, Deezer ou Apple Music."];
     }
 }
 
@@ -991,13 +1023,15 @@ function ytdl_resolve_deezer_playlist(string $url): array {
 }
 
 /**
- * YouTube Music : c'est déjà YouTube. Pas de recherche à faire ensuite —
- * chaque entrée porte directement sa vraie URL YouTube (youtube_url),
- * contrairement aux autres plateformes qui ne fournissent qu'artiste+titre.
+ * YouTube et YouTube Music : c'est déjà YouTube. Pas de recherche à faire
+ * ensuite — chaque entrée porte directement sa vraie URL YouTube
+ * (youtube_url), contrairement aux autres plateformes qui ne fournissent
+ * qu'artiste+titre. Le nom de la playlist est celui de YouTube, tel quel.
  */
-function ytdl_resolve_ytmusic_playlist(string $url): array {
-    $url = ytdl_canonical_playlist_url('ytmusic', $url);
-    if ($url === null) return ['error' => "Lien YouTube Music non reconnu."];
+function ytdl_resolve_ytmusic_playlist(string $url, string $platform = 'ytmusic'): array {
+    $label = $platform === 'youtube' ? 'YouTube' : 'YouTube Music';
+    $url = ytdl_canonical_playlist_url($platform, $url);
+    if ($url === null) return ['error' => "Lien $label non reconnu."];
     $ytDlp = ytdl_which('yt-dlp');
     if (!$ytDlp) return ['error' => 'yt-dlp est introuvable sur le serveur.'];
 
@@ -1005,9 +1039,9 @@ function ytdl_resolve_ytmusic_playlist(string $url): array {
     // playlist_title répété sur chaque ligne (pas de moyen plus simple de le
     // récupérer une seule fois en --flat-playlist) : on ne garde que celui de
     // la première.
-    $printFormat = "%(playlist_title)s\x1f%(id)s\x1f%(title)s\x1f%(uploader)s";
+    $printFormat = "%(playlist_title)s\x1f%(id)s\x1f%(title)s\x1f%(uploader,channel)s";
     $cmd = sprintf(
-        '%s%s%s --flat-playlist --skip-download --playlist-end 300 --print %s -- %s',
+        '%s%s%s --flat-playlist --skip-download --playlist-end 1000 --print %s -- %s',
         escapeshellarg($ytDlp),
         ytdl_js_runtime_flag(),
         ytdl_cookies_flag($scratch),
@@ -1018,7 +1052,7 @@ function ytdl_resolve_ytmusic_playlist(string $url): array {
     ytdl_rm_scratch($scratch);
 
     if ($out === '') {
-        return ['error' => $err !== '' ? ytdl_explain_error($err) : "Playlist YouTube Music introuvable ou privée."];
+        return ['error' => $err !== '' ? ytdl_explain_error($err) : "Playlist $label introuvable ou privée."];
     }
 
     $tracks = [];
@@ -1031,9 +1065,12 @@ function ytdl_resolve_ytmusic_playlist(string $url): array {
         if ($id === '' || $id === 'NA') continue;
         if ($playlistName === null) {
             $rawName = $parts[0] ?? '';
-            $playlistName = ($rawName !== '' && $rawName !== 'NA') ? $rawName : 'Playlist YouTube Music';
+            $playlistName = ($rawName !== '' && $rawName !== 'NA') ? $rawName : "Playlist $label";
         }
         $title    = ($parts[2] ?? '') !== 'NA' ? ($parts[2] ?? '') : '';
+        // Vidéos que YouTube affiche mais qu'on ne peut pas lire (supprimées,
+        // privées) : rien à télécharger.
+        if (preg_match('/^\[(Private|Deleted) video\]$/i', $title)) continue;
         $uploader = ($parts[3] ?? '') !== 'NA' ? ($parts[3] ?? '') : '';
         $tracks[] = [
             'artist'      => $uploader,
@@ -1041,8 +1078,8 @@ function ytdl_resolve_ytmusic_playlist(string $url): array {
             'youtube_url' => 'https://www.youtube.com/watch?v=' . $id,
         ];
     }
-    if (!$tracks) return ['error' => "Playlist YouTube Music vide ou introuvable."];
-    return ['platform' => 'ytmusic', 'name' => $playlistName ?? 'Playlist YouTube Music', 'tracks' => $tracks];
+    if (!$tracks) return ['error' => "Playlist $label vide ou introuvable."];
+    return ['platform' => $platform, 'name' => $playlistName ?? "Playlist $label", 'tracks' => $tracks];
 }
 
 /**

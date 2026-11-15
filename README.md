@@ -2,7 +2,7 @@
 
 **Une application musicale auto-hébergée, pensée aussi pour les smartphones iPhone et Android.** Retrouvez votre bibliothèque, vos playlists et les commandes de lecture dans une interface tactile adaptée au téléphone, à la tablette et à l’ordinateur.
 
-YTDL est une application web installable sur l’écran d’accueil (PWA), avec téléchargement vidéo ou audio via yt-dlp, partage entre comptes, paroles, fiches artistes et plusieurs apparences. Le serveur fonctionne en PHP ; vous gardez la maîtrise de votre installation.
+YTDL est une application web installable sur l’écran d’accueil (PWA), avec téléchargement vidéo ou audio via yt-dlp, partage entre comptes (y compris l’accès en lecture seule à la bibliothèque d’un autre compte, sur demande), import de playlists YouTube, Spotify, Deezer et Apple Music, paroles, fiches artistes et plusieurs apparences. Le serveur fonctionne en PHP ; vous gardez la maîtrise de votre installation.
 
 Cette édition est issue d’une installation personnelle, rendue indépendante de son serveur d’origine. Elle est distribuée sous **GPL-3.0-only**. Elle ne contient aucun compte préconfiguré, bibliothèque musicale, cookie de connexion ou clé de notification de l’instance d’origine.
 

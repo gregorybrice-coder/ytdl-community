@@ -26,3 +26,19 @@
 <IfModule mod_alias.c>
     RedirectMatch 404 ^/ytdl/(scripts|tests|config-examples|\.git|\.github|vendor)(/|$)
 </IfModule>
+
+# Durcissement : le dépôt .git, les fichiers cachés, les journaux, la documentation,
+# les scripts et les dépendances ne sont jamais servis. [NC] : certains disques
+# (macOS, Windows) ignorent la casse des noms de fichiers.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [F,L,NC]
+    RewriteRule ^vendor(/|$) - [F,L,NC]
+    RewriteRule \.(log|md|sh|txt|lock|sql|db|sqlite3?|bak[0-9]*|backup|old|orig|swp|ini|py|pem|key|zip|tar|gz)$ - [F,L,NC]
+    RewriteRule (^|/)[^/]+\.avant_[^/]*$ - [F,L,NC]
+    # Scripts en ligne de commande uniquement (migrations, vérifications)
+    RewriteRule ^(migrate-[^/]*|dedupe-check)\.php$ - [F,L,NC]
+</IfModule>
+<FilesMatch "(?i)^(\..*|.*\.(log|md|sh|lock|sql|db|pem|key|zip)|migrate-.*\.php|dedupe-check\.php)$">
+    Require all denied
+</FilesMatch>

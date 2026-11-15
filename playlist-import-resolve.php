@@ -1,7 +1,7 @@
 <?php
 /**
- * Résout un lien de playlist externe (Spotify, Deezer, YouTube Music, Apple
- * Music) en une liste de titres à retrouver sur YouTube — voir
+ * Résout un lien de playlist externe (YouTube, YouTube Music, Spotify, Deezer,
+ * Apple Music) en une liste de titres à retrouver sur YouTube — voir
  * ytdl_resolve_external_playlist() dans lib.php pour le détail par
  * plateforme. Ne télécharge rien ici : juste la lecture de la playlist
  * source, le matching YouTube et le téléchargement se font ensuite côté

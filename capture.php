@@ -53,8 +53,8 @@ unset($_SESSION['shared_urls']);
 <meta name="apple-mobile-web-app-title" content="ytdl">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
-  // Posé avant le CSS pour éviter un flash du skin sombre par défaut au
-  // chargement — appliqué directement sur <html>, lu de façon synchrone.
+  // Lu de façon synchrone avant le CSS : bascule tout de suite vers l'interface
+  // de l'apparence, sans afficher d'abord l'interface classique.
   (function () {
     try {
       // L'apparence enregistrée sur le compte (users.skin, voir set-skin.php)
@@ -63,15 +63,14 @@ unset($_SESSION['shared_urls']);
       var serverSkin = <?php echo json_encode($user['skin'] ?? null); ?>;
       var skin = serverSkin || localStorage.getItem('ytdl_skin');
       if (serverSkin) localStorage.setItem('ytdl_skin', serverSkin);
-      // Sillon, Orbite et Platine sont des interfaces à part entière
-      // (sillon.php…), pas des jeux de couleurs : on y bascule d'emblée, sauf
-      // avec ?classic=1 (accès volontaire à l'interface classique). Un lien
-      // reçu par le partage natif leur est transmis plutôt que traité ici.
-      if (['sillon', 'orbite', 'platine', 'heros', 'galaxie', 'retro', 'arcade', 'nature', 'muse', 'aurore', 'bauhaus', 'carnet', 'laiton'].indexOf(skin) !== -1) {
-        if (!/[?&]classic=1/.test(location.search)) location.replace(skin + '.php' + <?php echo json_encode($sharedUrls ? '?shared=' . rawurlencode(implode("\n", $sharedUrls)) : ''); ?>);
-        skin = null;
-      }
-      if (skin && skin !== 'sombre') document.documentElement.setAttribute('data-skin', skin);
+      // Les apparences sont toutes des interfaces à disque (sillon.php…) ;
+      // Sombre, Clair, Ambre et Kawaii (jeux de couleurs de cette page) ont
+      // été retirées le 2026-11-15. Sans apparence connue, Sillon. On y
+      // bascule d'emblée, sauf avec ?classic=1 (accès volontaire à
+      // l'interface classique). Un lien reçu par le partage natif leur est
+      // transmis plutôt que traité ici.
+      if (['sillon', 'orbite', 'platine', 'heros', 'galaxie', 'retro', 'arcade', 'nature', 'muse', 'aurore', 'bauhaus', 'carnet', 'laiton'].indexOf(skin) === -1) skin = 'sillon';
+      if (!/[?&]classic=1/.test(location.search)) location.replace(skin + '.php' + <?php echo json_encode($sharedUrls ? '?shared=' . rawurlencode(implode("\n", $sharedUrls)) : ''); ?>);
     } catch (err) {}
   })();
 </script>
@@ -136,89 +135,6 @@ unset($_SESSION['shared_urls']);
     --hero-cta-bg: #1b2b22;
     --hero-cta-bg-hover: #314938;
     --hero-cta-text: #f3f4e8;
-  }
-  /* ============================================================
-     Skins — chaque jeu de valeurs réécrit les variables ci-dessus ;
-     tout le reste du CSS n'y touche jamais directement (voir le sélecteur
-     de skin côté JS dans "Mon profil", qui recharge la page au choix). */
-  [data-skin="clair"] {
-    --bg: #f4f6fb;
-    --panel: rgba(255, 255, 255, .85);
-    --border: rgba(16, 19, 26, .12);
-    --text: #14181f;
-    --text-dim: #5a6478;
-    --accent: #d1602a;
-    --accent-2: #a8471a;
-    --error: #c62f2f;
-    --success: #1f8a4c;
-    --shared: #b5661a;
-    --surface: #e9ebf1;
-    --surface-2: #dde1ea;
-    --on-accent: #fff8f0;
-    --btn-light-bg: #1c2029;
-    --chip-bg: #e4e7ef;
-    --overlay-rgb: 16,19,26;
-    --accent-rgb: 209,96,42;
-    --accent-2-rgb: 168,71,26;
-    --success-rgb: 31,138,76;
-    --error-rgb: 198,47,47;
-    --surface-2-rgb: 221,225,234;
-    --neon-rgb: 0,180,255;
-  }
-  [data-skin="ambre"] {
-    --bg: #1a1208;
-    --panel: rgba(43, 30, 12, .82);
-    --border: rgba(255, 191, 102, .22);
-    --text: #fff3e0;
-    --text-dim: #c7a883;
-    --accent: #ffb74d;
-    --accent-2: #ff7043;
-    --error: #ff6b6b;
-    --success: #9ccc65;
-    --shared: #4dd0e1;
-    --surface: #0d0904;
-    --surface-2: #1c130a;
-    --on-accent: #1a1208;
-    /* Contrairement à --chip-bg, ce fond doit rester CLAIR : son icône suit
-       --on-accent, sombre dans ce skin (voir plus haut) — les deux sombres
-       ensemble rendaient le bouton play du mini-lecteur quasi invisible. */
-    --btn-light-bg: #fff3e0;
-    --chip-bg: #2a1d10;
-    --overlay-rgb: 255,255,255;
-    --accent-rgb: 255,183,77;
-    --accent-2-rgb: 255,112,67;
-    --success-rgb: 156,204,101;
-    --error-rgb: 255,107,107;
-    --surface-2-rgb: 28,19,10;
-  }
-  [data-skin="kawaii"] {
-    --bg: #fff0f5;
-    --panel: rgba(255, 255, 255, .85);
-    --border: rgba(255, 140, 190, .28);
-    --text: #5c3a52;
-    --text-dim: #b088a8;
-    --accent: #ff8fab;
-    --accent-2: #b39ddb;
-    --error: #ff6f91;
-    --success: #7bc99a;
-    --shared: #ffb26b;
-    --surface: #ffe4ef;
-    --surface-2: #ffd9ea;
-    /* PAS blanc : --btn-light-bg est déjà blanc, les deux ensemble rendaient
-       le badge de compte de titres (et le bouton play du mini-lecteur)
-       illisibles — même piège que rencontré sur le skin Ambre. */
-    --on-accent: #5c3a52;
-    --btn-light-bg: #ffffff;
-    --chip-bg: #ffe0ec;
-    --overlay-rgb: 92,58,82;
-    --accent-rgb: 255,143,171;
-    --accent-2-rgb: 179,157,219;
-    --success-rgb: 123,201,154;
-    --error-rgb: 255,111,145;
-    --surface-2-rgb: 255,217,234;
-    /* Le cyan par défaut jure sur ce fond rose pastel — violet/fuchsia vif à
-       la place, qui reste dans la palette du skin (proche de --accent-2). */
-    --neon-rgb: 219,50,255;
   }
   * { box-sizing: border-box; }
   /* Neutralise le « tirer pour rafraîchir » de Chrome/Android : en pleine
@@ -483,10 +399,6 @@ unset($_SESSION['shared_urls']);
   /* Aperçus : vraies captures d'écran de chaque apparence (ui/skins/previews/). */
   .skin-swatch { width: 100%; aspect-ratio: 360 / 780; height: auto; border-radius: 10px; display: block; border: 1px solid rgba(var(--overlay-rgb),0.1); background-size: cover !important; background-position: top center !important; }
   .skin-choice { flex: 1 1 calc(33% - 8px); max-width: calc(33.33% - 7px); }
-  .skin-swatch-sombre { background: url(ui/skins/previews/sombre.jpg?v=3); }
-  .skin-swatch-clair { background: url(ui/skins/previews/clair.jpg?v=3); }
-  .skin-swatch-ambre { background: url(ui/skins/previews/ambre.jpg?v=3); }
-  .skin-swatch-kawaii { background: url(ui/skins/previews/kawaii.jpg?v=3); }
   .skin-swatch-orbite { background: url(ui/skins/previews/orbite.jpg?v=10); }
   .skin-swatch-platine { background: url(ui/skins/previews/platine.jpg?v=10); }
   .skin-swatch-heros { background: url(ui/skins/previews/heros.jpg?v=10); }
@@ -500,63 +412,6 @@ unset($_SESSION['shared_urls']);
   .skin-swatch-carnet { background: url(ui/skins/previews/carnet.jpg?v=10); }
   .skin-swatch-laiton { background: url(ui/skins/previews/laiton.jpg?v=10); }
   .skin-swatch-sillon { background: url(ui/skins/previews/sillon.jpg?v=10); }
-  /* Petits personnages décoratifs du skin Kawaii, posés uniquement dans des
-     zones qui sont déjà vides le reste du temps — jamais au-dessus d'un
-     contrôle réel. Masqués pour tout autre skin (voir data-skin plus haut) :
-     .music-sidebar-bottom a margin-top:auto (voir music.css), donc tout ce
-     qui se met avant elle dans la colonne flex récupère automatiquement
-     l'espace resté vide entre la nav et elle. */
-  .kawaii-sidebar-mascot, .kawaii-end-mascot { display: none; }
-  [data-skin="kawaii"] .kawaii-sidebar-mascot {
-    display: flex; flex: 1; align-items: center; justify-content: center; min-height: 111px;
-  }
-  .kawaii-pupil { transition: transform 0.1s ease-out; }
-  .kawaii-cheek { transition: transform 0.3s ease; transform-origin: center; }
-  .kawaii-mouth-open .kawaii-cheek-l { transform: translateX(-6px); }
-  .kawaii-mouth-open .kawaii-cheek-r { transform: translateX(6px); }
-  /* Queue : petits coups de balancier de temps en temps (voir setupKawaiiMascot,
-     classe .wagging posée/retirée par JS), pas une boucle permanente. */
-  .kawaii-tail { transform-box: fill-box; transform-origin: 85% 60%; }
-  .kawaii-tail.wagging { animation: kawaii-tail-wag 0.5s ease-in-out 3; }
-  @keyframes kawaii-tail-wag {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(-14deg); }
-  }
-  /* Sieste (perte de focus/souris hors fenêtre, voir setupKawaiiMascot) :
-     fondu-bascule entre deux illustrations distinctes (assis / couché sur le
-     dos) plutôt qu'une simple rotation à 180° de la pose assise, qui donnait
-     une tête inversée peu naturelle. La pose assise part en s'inclinant
-     légèrement (petite bascule, pas un tour complet), la pose sieste arrive
-     en grossissant depuis un peu plus petit (petit "plop"). Le "Zzz" est HORS
-     des deux groupes pour toujours rester lisible à l'endroit. */
-  .kawaii-pose-sitting, .kawaii-pose-asleep {
-    transform-box: fill-box; transform-origin: 50% 85%;
-    /* Assez lent pour qu'on ait le temps de VOIR le chat se relever au
-       réveil, pas juste un flash entre les deux poses. */
-    transition: opacity 1.1s ease, transform 1.1s ease;
-  }
-  .kawaii-pose-asleep { opacity: 0; transform: scale(0.85); pointer-events: none; }
-  .kawaii-zzz { opacity: 0; transition: opacity 0.4s ease 0.2s; }
-  .kawaii-sidebar-mascot.asleep .kawaii-pose-sitting { opacity: 0; transform: rotate(-8deg) scale(0.92); }
-  .kawaii-sidebar-mascot.asleep .kawaii-pose-asleep { opacity: 1; transform: scale(1); }
-  .kawaii-sidebar-mascot.asleep .kawaii-zzz { opacity: 1; animation: kawaii-zzz-drift 3s ease-in-out infinite; }
-  /* Flotte doucement de droite à gauche façon "Zzz..." de bande dessinée —
-     un aller-retour d'environ 5 caractères de large (~24px à cette taille de
-     police), en boucle tant que le chat dort. */
-  @keyframes kawaii-zzz-drift {
-    0%, 100% { transform: translateX(-12px); }
-    50% { transform: translateX(12px); }
-  }
-  /* La sidebar verticale n'existe qu'à partir de 761px (voir music.css) — en
-     dessous, elle devient une barre horizontale sans le moindre espace mort
-     à combler, d'où cette même limite ici. */
-  @media (max-width: 760px) {
-    [data-skin="kawaii"] .kawaii-sidebar-mascot { display: none; }
-  }
-  [data-skin="kawaii"] .kawaii-end-mascot {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 32px 0 12px; color: var(--text-dim); font-size: 0.8rem;
-  }
   .profile-save-btn { width: 100%; }
   /* Bannière d'attente affichée le temps que les liens reçus par partage natif
      (Android/PWA share_target) récupèrent leur titre — sans elle, la file
@@ -1437,11 +1292,7 @@ unset($_SESSION['shared_urls']);
      content (3 niveaux, le dégradé accent de la ligne en cours) chaque
      fois que CETTE ligne précise tombait sur un rang pair — perdant le
      surlignage "en cours" derrière une couleur de zébrage plate. */
-  [data-skin="sombre"] .music-app .library-item:nth-child(even):not(.playing) .library-item-swipe-content,
   html:not([data-skin]) .music-app .library-item:nth-child(even):not(.playing) .library-item-swipe-content { background: #595856; }
-  [data-skin="clair"] .music-app .library-item:nth-child(even):not(.playing) .library-item-swipe-content { background: #a1a5ad; }
-  [data-skin="ambre"] .music-app .library-item:nth-child(even):not(.playing) .library-item-swipe-content { background: #605646; }
-  [data-skin="kawaii"] .music-app .library-item:nth-child(even):not(.playing) .library-item-swipe-content { background: #cea9bc; }
   /* Filtre de recherche : flou + fondu + repli en douceur plutôt qu'un
      display:none instantané — l'item reste dans le flux (juste réduit à
      zéro), pas besoin de recalculer le DOM à chaque frappe. */
@@ -2354,6 +2205,7 @@ unset($_SESSION['shared_urls']);
   }
 </style>
 <link rel="stylesheet" href="music.css?v=20260921-sync-guide1">
+<link rel="stylesheet" href="ui/import-guide.css?v=1">
 </head>
 <body class="music-app">
   <div class="toast" id="toast">
@@ -2420,63 +2272,6 @@ unset($_SESSION['shared_urls']);
       <button class="music-nav" data-music-target="video"><span aria-hidden="true">▷</span> Mes clips</button>
       <button class="music-nav" data-music-target="playlists"><span aria-hidden="true">☷</span> Mes playlists</button>
     </nav>
-    <div class="kawaii-sidebar-mascot" aria-hidden="true">
-      <svg viewBox="0 0 120 185" width="72" height="111">
-        <!-- Deux poses distinctes, jamais la même tournée à 180° (ça donnait
-             une tête inversée peu naturelle) : la sieste fait place nette à
-             une vraie illustration allongée, et setupKawaiiMascot() fait un
-             fondu-bascule entre les deux (voir .asleep dans le CSS). -->
-        <g class="kawaii-pose-sitting">
-          <!-- Assis : queue enroulée, corps, jambes — dessinés avant la tête
-               pour rester derrière elle dans l'empilement SVG. -->
-          <path class="kawaii-tail" d="M90 154 Q114 150 112 112 Q110 90 96 95" stroke="#ffb3c6" stroke-width="14" fill="none" stroke-linecap="round"/>
-          <ellipse cx="60" cy="140" rx="40" ry="40" fill="#fff5f8"/>
-          <!-- Jambes avant : un vrai segment du corps jusqu'au pied, pas
-               juste une boule flottante en bas. -->
-          <rect x="30" y="148" width="17" height="32" rx="8.5" fill="#fff5f8" stroke="#ffb3c6" stroke-width="2"/>
-          <rect x="73" y="148" width="17" height="32" rx="8.5" fill="#fff5f8" stroke="#ffb3c6" stroke-width="2"/>
-          <circle cx="38.5" cy="177" r="10.5" fill="#fff5f8" stroke="#ffb3c6" stroke-width="2.5"/>
-          <circle cx="81.5" cy="177" r="10.5" fill="#fff5f8" stroke="#ffb3c6" stroke-width="2.5"/>
-          <circle cx="28" cy="28" r="16" fill="#ffd3e2"/><circle cx="92" cy="28" r="16" fill="#ffd3e2"/>
-          <circle cx="28" cy="28" r="8" fill="#ff9fbb"/><circle cx="92" cy="28" r="8" fill="#ff9fbb"/>
-          <circle cx="60" cy="62" r="46" fill="#fff5f8"/>
-          <!-- Reculent vers les oreilles pendant que la bouche est ouverte (voir
-               setupKawaiiMascot()), reviennent ensuite — classe posée sur le
-               <svg> parent, translateX opposé pour chaque joue. -->
-          <ellipse class="kawaii-cheek kawaii-cheek-l" cx="32" cy="72" rx="9" ry="6" fill="#ffb3c6" opacity="0.7"/>
-          <ellipse class="kawaii-cheek kawaii-cheek-r" cx="88" cy="72" rx="9" ry="6" fill="#ffb3c6" opacity="0.7"/>
-          <!-- Le blanc de l'œil reste fixe, seule la pupille (groupe
-               .kawaii-pupil) est translatée en JS vers le curseur. -->
-          <circle cx="44" cy="60" r="8" fill="#fff"/><circle cx="76" cy="60" r="8" fill="#fff"/>
-          <g class="kawaii-pupil"><circle cx="44" cy="60" r="5" fill="#5c3a52"/><circle cx="45.6" cy="58.4" r="1.5" fill="#fff"/></g>
-          <g class="kawaii-pupil"><circle cx="76" cy="60" r="5" fill="#5c3a52"/><circle cx="77.6" cy="58.4" r="1.5" fill="#fff"/></g>
-          <path class="kawaii-mascot-mouth" d="M52 76 Q60 82 68 76" stroke="#5c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
-        </g>
-        <!-- En boule, tête posée sur les pattes avant repliées devant — pas
-             sur le dos (relisait comme des antennes) : pose classique du chat
-             qui dort, illustration à part entière. -->
-        <g class="kawaii-pose-asleep">
-          <!-- queue enroulée autour du corps -->
-          <path d="M108 138 Q128 128 120 100 Q116 86 100 90" stroke="#ffb3c6" stroke-width="13" fill="none" stroke-linecap="round"/>
-          <!-- corps en boule, couché -->
-          <ellipse cx="66" cy="128" rx="46" ry="30" fill="#fff5f8"/>
-          <!-- pattes avant repliées devant, sous le menton -->
-          <ellipse cx="36" cy="118" rx="14" ry="10" fill="#fff5f8" stroke="#ffb3c6" stroke-width="2"/>
-          <ellipse cx="54" cy="122" rx="14" ry="10" fill="#fff5f8" stroke="#ffb3c6" stroke-width="2"/>
-          <!-- oreilles, aplaties (chat détendu) -->
-          <circle cx="24" cy="76" r="11" fill="#ffd3e2"/><circle cx="48" cy="70" r="11" fill="#ffd3e2"/>
-          <circle cx="24" cy="76" r="5.5" fill="#ff9fbb"/><circle cx="48" cy="70" r="5.5" fill="#ff9fbb"/>
-          <!-- tête posée sur les pattes -->
-          <circle cx="42" cy="98" r="34" fill="#fff5f8"/>
-          <ellipse cx="30" cy="108" rx="8" ry="5" fill="#ffb3c6" opacity="0.6"/>
-          <ellipse cx="56" cy="110" rx="8" ry="5" fill="#ffb3c6" opacity="0.6"/>
-          <path d="M28 96 Q34 101 40 96" stroke="#5c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M48 97 Q54 102 60 97" stroke="#5c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M38 112 Q42 115 46 112" stroke="#5c3a52" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        </g>
-        <text class="kawaii-zzz" x="94" y="30" font-size="15" font-weight="700" fill="#c98aa8">Zzz…</text>
-      </svg>
-    </div>
     <div class="music-sidebar-bottom"><div class="music-sidebar-note"><span>À votre image.</span><p>Des titres à garder.<br>Des playlists à partager.</p></div><button class="music-add" data-music-target="import">＋ Ajouter un titre</button></div>
   </aside>
   <main class="card" id="music-home">
@@ -2696,19 +2491,6 @@ unset($_SESSION['shared_urls']);
       <div class="desktop-artist-panel" id="desktop-artist-panel"></div>
     </div>
     </div>
-    <div class="kawaii-end-mascot" aria-hidden="true">
-      <svg viewBox="0 0 120 120" width="56" height="56">
-        <circle cx="28" cy="28" r="16" fill="#ffd3e2"/><circle cx="92" cy="28" r="16" fill="#ffd3e2"/>
-        <circle cx="28" cy="28" r="8" fill="#ff9fbb"/><circle cx="92" cy="28" r="8" fill="#ff9fbb"/>
-        <circle cx="60" cy="62" r="46" fill="#fff5f8"/>
-        <ellipse cx="32" cy="72" rx="9" ry="6" fill="#ffb3c6" opacity="0.7"/>
-        <ellipse cx="88" cy="72" rx="9" ry="6" fill="#ffb3c6" opacity="0.7"/>
-        <path d="M39 60 Q44 55 49 60" stroke="#5c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M71 60 Q76 55 81 60" stroke="#5c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M50 78 Q60 86 70 78" stroke="#5c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
-      </svg>
-      <span>C'est tout pour l'instant !</span>
-    </div>
   </main>
 
   <div class="download-sheet-overlay" id="download-sheet-overlay">
@@ -2747,7 +2529,7 @@ unset($_SESSION['shared_urls']);
         </span>
         <span class="playlist-import-cta-text">
           <strong>Importer une playlist</strong>
-          <span>Spotify, Deezer, YouTube Music, Apple Music…</span>
+          <span>YouTube, Spotify, Deezer, Apple Music…</span>
         </span>
         <span class="playlist-import-cta-arrow">→</span>
       </button>
@@ -2820,7 +2602,7 @@ unset($_SESSION['shared_urls']);
   </div>
 
   <!-- Import de playlist externe : colle un lien de playlist publique
-       (Spotify, Deezer, YouTube Music, Apple Music), on retrouve chaque
+       (YouTube, YouTube Music, Spotify, Deezer, Apple Music), on retrouve chaque
        titre sur YouTube et on les télécharge un par un dans une playlist
        locale portant le même nom — voir setupPlaylistImport() plus bas. -->
   <div class="download-sheet-overlay" id="playlist-import-sheet-overlay">
@@ -2835,12 +2617,14 @@ unset($_SESSION['shared_urls']);
            mélangerait deux process de téléchargement concurrents (progression,
            playlists créées...) — il faut d'abord laisser celui en cours
            se terminer. -->
+      <button type="button" class="ytdl-guide-trigger" data-playlist-guide>▷ Voir comment faire</button>
       <div id="playlist-import-source">
         <form id="playlist-import-form">
           <label for="playlist-import-url">Lien de playlist publique</label>
-          <input type="text" id="playlist-import-url" placeholder="https://open.spotify.com/playlist/…">
+          <input type="text" id="playlist-import-url" placeholder="https://www.youtube.com/playlist?list=…">
           <div class="hint" style="margin-top:6px;">
-            Spotify, Deezer, YouTube Music ou Apple Music. La playlist doit être publique/partageable.
+            YouTube, YouTube Music, Spotify, Deezer ou Apple Music. La playlist doit être publique/partageable.
+            Pour YouTube, elle garde son nom et tous ses titres sont importés.
             Amazon Music n'est pas pris en charge (aucune page publique exploitable).
           </div>
           <button type="submit" class="primary" id="playlist-import-analyze-btn">Analyser</button>
@@ -3461,18 +3245,6 @@ unset($_SESSION['shared_urls']);
       <div class="profile-section">
         <label class="profile-section-label">Apparence</label>
         <div class="skin-grid" id="profile-skin-grid">
-          <button type="button" class="skin-choice" data-skin="sombre" title="Sombre">
-            <span class="skin-swatch skin-swatch-sombre"></span><span>Sombre</span>
-          </button>
-          <button type="button" class="skin-choice" data-skin="clair" title="Clair">
-            <span class="skin-swatch skin-swatch-clair"></span><span>Clair</span>
-          </button>
-          <button type="button" class="skin-choice" data-skin="ambre" title="Ambre">
-            <span class="skin-swatch skin-swatch-ambre"></span><span>Ambre</span>
-          </button>
-          <button type="button" class="skin-choice" data-skin="kawaii" title="Kawaii">
-            <span class="skin-swatch skin-swatch-kawaii"></span><span>Kawaii</span>
-          </button>
           <button type="button" class="skin-choice" data-skin="sillon" title="Sillon — nouvelle interface">
             <span class="skin-swatch skin-swatch-sillon"></span><span>Sillon</span>
           </button>
@@ -3677,12 +3449,11 @@ unset($_SESSION['shared_urls']);
   let selectedAvatar = <?php echo json_encode($user['avatar']); ?>;
 
   // Skins : appliqués tout de suite au clic (pas besoin d'« Enregistrer »),
-  // et déjà posés sur <html> avant même ce script (voir le petit script en
-  // tête de <head>, qui évite le flash du skin sombre par défaut).
+  // chaque apparence vit dans sa propre page (voir le script de tête).
   const SKIN_KEY = 'ytdl_skin';
   const profileSkinGrid = document.getElementById('profile-skin-grid');
   function currentSkin() {
-    return document.documentElement.getAttribute('data-skin') || 'sombre';
+    return localStorage.getItem(SKIN_KEY) || 'sillon';
   }
   // N'applique QUE la mise en surbrillance du bon bouton — jamais l'attribut
   // lui-même : celui-ci est déjà posé sur <html> par le petit script en tête
@@ -3698,113 +3469,13 @@ unset($_SESSION['shared_urls']);
       const skin = choice.dataset.skin;
       if (skin === currentSkin()) return; // déjà le skin actif, rien à faire
       try { localStorage.setItem(SKIN_KEY, skin); } catch (err) {}
-      // Sillon vit dans sa propre page (voir le script de tête).
       // Enregistré aussi sur le compte, pour tous les appareils.
       // Attendu avant de recharger : le script de tête relit l'apparence du
       // compte, qui doit déjà être la nouvelle.
       await fetch('set-skin.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ skin: skin }) }).catch(() => {});
-      if (['sillon', 'orbite', 'platine', 'heros', 'galaxie', 'retro', 'arcade', 'nature', 'muse', 'aurore', 'bauhaus', 'carnet', 'laiton'].indexOf(skin) !== -1) { location.href = skin + '.php'; return; }
-      // Un simple changement de l'attribut data-skin suffit en théorie (les
-      // variables CSS sont réactives), mais l'app installée en PWA sur
-      // mobile ne le répercute pas de façon fiable sans un rechargement —
-      // on force donc un rechargement complet, qui repart du bon skin dès le
-      // script de tête (pas de flash de l'ancien skin entre-temps).
-      location.reload();
+      location.href = skin + '.php';
     });
   });
-
-  // Personnage de la barre latérale (skin Kawaii) : les pupilles suivent la
-  // souris, la bouche change de forme au hasard de temps en temps. Coûte
-  // rien tant que le skin Kawaii n'est pas actif (l'élément reste caché en
-  // CSS, mais la souris étant rarement immobile, autant garder ce petit
-  // écouteur global léger plutôt que de le brancher/débrancher au choix du
-  // skin — deux cercles à translater, négligeable).
-  (function setupKawaiiMascot() {
-    const mascotEl = document.querySelector('.kawaii-sidebar-mascot');
-    const pupils = document.querySelectorAll('.kawaii-pupil');
-    const mouth = document.querySelector('.kawaii-mascot-mouth');
-    const tail = document.querySelector('.kawaii-tail');
-    if (!pupils.length && !mouth) return;
-    let asleep = false; // pendant la sieste, la bouche/queue arrêtent de bouger
-    const MAX_OFFSET = 2.2; // px dans le repère du viewBox (yeux de rayon 8, pupille 5)
-    document.addEventListener('mousemove', e => {
-      pupils.forEach(p => {
-        const svg = p.ownerSVGElement;
-        if (!svg) return;
-        const rect = svg.getBoundingClientRect();
-        const angle = Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2));
-        p.setAttribute('transform', 'translate(' + (Math.cos(angle) * MAX_OFFSET).toFixed(2) + ',' + (Math.sin(angle) * MAX_OFFSET).toFixed(2) + ')');
-      });
-    }, { passive: true });
-
-    if (mouth) {
-      const MOUTH_OPEN = 'M56 77 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0'; // bouche en "o"
-      const MOUTHS = [
-        'M52 76 Q60 82 68 76',   // sourire
-        'M54 78 Q60 74 66 78',   // moue curieuse
-        MOUTH_OPEN,
-        'M52 77 L68 77',          // neutre
-      ];
-      const svg = mouth.ownerSVGElement;
-      let lastMouth = mouth.getAttribute('d');
-      (function scheduleMouth() {
-        setTimeout(() => {
-          if (!asleep) {
-            const choices = MOUTHS.filter(m => m !== lastMouth);
-            lastMouth = choices[Math.floor(Math.random() * choices.length)];
-            mouth.setAttribute('d', lastMouth);
-            // Les joues reculent tant que la bouche reste ouverte, et
-            // reviennent d'elles-mêmes dès qu'une autre forme est tirée —
-            // la transition CSS (voir .kawaii-cheek) fait le mouvement.
-            if (svg) svg.classList.toggle('kawaii-mouth-open', lastMouth === MOUTH_OPEN);
-          }
-          scheduleMouth();
-        }, 2200 + Math.random() * 2800);
-      })();
-    }
-
-    // Coup de queue de temps en temps — jamais en boucle continue, juste un
-    // petit mouvement ponctuel comme un vrai chat qui s'ennuie un peu.
-    if (tail) {
-      (function scheduleTailWag() {
-        setTimeout(() => {
-          if (!asleep) {
-            tail.classList.remove('wagging');
-            void tail.offsetWidth; // relance l'animation même si la classe était déjà là juste avant
-            tail.classList.add('wagging');
-          }
-          scheduleTailWag();
-        }, 4000 + Math.random() * 6000);
-      })();
-    }
-
-    // Sieste sur le dos : au-delà de 10s sans focus fenêtre NI souris dans le
-    // navigateur, le chat se retourne et ferme les yeux (voir .asleep dans le
-    // CSS) ; il se rassoit dès que l'un des deux revient — pas besoin des
-    // deux à la fois, la perte du focus (autre appli au premier plan) et la
-    // souris qui sort de la fenêtre (autre appli visible mais pas au premier
-    // plan) sont deux façons différentes de constater la même chose.
-    if (mascotEl) {
-      let sleepTimer = null;
-      function scheduleSleep() {
-        clearTimeout(sleepTimer);
-        sleepTimer = setTimeout(() => {
-          asleep = true;
-          mascotEl.classList.add('asleep');
-        }, 10000);
-      }
-      function wakeUp() {
-        clearTimeout(sleepTimer);
-        sleepTimer = null;
-        asleep = false;
-        mascotEl.classList.remove('asleep');
-      }
-      window.addEventListener('blur', scheduleSleep);
-      window.addEventListener('focus', wakeUp);
-      document.addEventListener('mouseleave', scheduleSleep);
-      document.addEventListener('mouseenter', wakeUp);
-    }
-  })();
 
   // Section du panneau à faire briller pour chaque type de notification —
   // un futur type ajoute juste une entrée ici. Rien de mappé pour un type
@@ -4200,6 +3871,25 @@ unset($_SESSION['shared_urls']);
       body: JSON.stringify(sub.toJSON()),
     });
   }
+
+  // Clés VAPID changées (2026-11-11) : réabonne en silence un navigateur
+  // encore abonné avec l'ancienne clé (permission déjà accordée).
+  (async () => {
+    try {
+      if (!pushSupported() || Notification.permission !== 'granted' || !VAPID_PUBLIC_KEY) return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      const cur = sub && sub.options && sub.options.applicationServerKey;
+      if (!cur) return;
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(cur))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      if (b64 === VAPID_PUBLIC_KEY.replace(/=+$/, '')) return;
+      const oldEndpoint = sub.endpoint;
+      await sub.unsubscribe();
+      fetch('push-unsubscribe.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: oldEndpoint }) }).catch(() => {});
+      const fresh = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+      await fetch('push-subscribe.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fresh.toJSON()) });
+    } catch (err) { /* jamais bloquant */ }
+  })();
 
   async function disablePush() {
     const reg = await navigator.serviceWorker.ready;
@@ -11600,5 +11290,6 @@ unset($_SESSION['shared_urls']);
 <script>
   if (window.YtdlPasskey) setTimeout(() => window.YtdlPasskey.offer(<?php echo json_encode(['id' => (int)$user['id'], 'name' => (string)$user['name'], 'avatar' => (string)($user['avatar'] ?? '')], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE); ?>), 2500);
 </script>
+<script src="ui/import-guide.js?v=1"></script>
 </body>
 </html>

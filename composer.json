@@ -5,6 +5,8 @@
     "license": "GPL-3.0-only",
     "require": {
         "minishlink/web-push": "^11.0",
-        "lbuchs/webauthn": "^2.2"
+        "lbuchs/webauthn": "^2.2",
+        "symfony/http-client": "^7.4",
+        "nyholm/psr7": "^1.8"
     }
 }

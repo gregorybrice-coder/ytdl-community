@@ -99,7 +99,6 @@
   transform: rotate(-1deg); transform-origin: left center;
 }
 .now-meta { font-family: var(--font-mono); }
-.now-rating button { color: rgba(61, 61, 61, .25); }
 .now-rating button.on { color: #f2b705; text-shadow: 0 0 0 var(--cn-pencil); -webkit-text-stroke: 1px var(--cn-pencil); }
 
 .needle { background: #c62828; height: 4px; border-radius: 2px; box-shadow: none; transform: var(--needle-transform, translate(-100%, -50%)) rotate(-4deg); }

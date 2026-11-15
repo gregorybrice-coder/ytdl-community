@@ -169,6 +169,41 @@ function ytdl_db(): PDO {
     ");
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_library_shares_recipient ON library_shares(shared_with_user_id)');
 
+    // Partage vers quelqu'un qui a DÉJÀ le fichier (son propriétaire) : pas
+    // un droit d'accès, juste une recommandation affichée « partagé par … »
+    // sur son propre titre. Table à part pour ne rien changer à la logique
+    // de library_shares (dossier Shared/, transfert de propriété à la
+    // suppression, compteurs).
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS track_recommendations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            history_id INTEGER NOT NULL REFERENCES download_history(id) ON DELETE CASCADE,
+            recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            sender_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(history_id, recipient_user_id, sender_user_id)
+        )
+    ");
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_track_recommendations_recipient ON track_recommendations(recipient_user_id)');
+
+    // Accès en lecture seule à TOUTE la bibliothèque d'un autre compte, sur
+    // demande (voir library-access.php) : le demandeur la voit comme une
+    // playlist au nom du propriétaire, peut l'écouter et en importer des
+    // titres (library-access-import.php) — l'import crée de vrais partages
+    // library_shares, jamais de copie de fichier.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS library_access (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            viewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            decided_at TEXT,
+            UNIQUE(owner_user_id, viewer_user_id)
+        )
+    ");
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_library_access_viewer ON library_access(viewer_user_id)');
+
     // Notation par étoiles (1-5), personnelle à chaque compte — un morceau
     // partagé peut être noté différemment par son propriétaire et par chacun
     // des destinataires, chacun avec ses propres goûts. Sert à pondérer la
@@ -353,8 +388,8 @@ function ytdl_db(): PDO {
         )
     ");
 
-    // Apparence choisie (sombre, clair, ambre, kawaii, sillon, orbite,
-    // platine) : gardée côté serveur pour suivre le compte d'un appareil à
+    // Apparence choisie (sillon, orbite, platine… voir set-skin.php ;
+    // sombre, clair, ambre et kawaii retirées le 2026-11-15) : gardée côté serveur pour suivre le compte d'un appareil à
     // l'autre. NULL = jamais choisie ici, chaque appareil garde alors son
     // propre réglage local (comportement d'avant).
     if (!in_array('skin', $userCols, true)) {

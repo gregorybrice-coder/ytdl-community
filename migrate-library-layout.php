@@ -1,4 +1,6 @@
 <?php
+// Ligne de commande uniquement (2026-11-11) : jamais exécutable par le web.
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 /**
  * Migration ponctuelle, à lancer une seule fois à la main (jamais au
  * démarrage de l'app comme les migrations SQL légères de db.php) :

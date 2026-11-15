@@ -193,6 +193,8 @@ foreach (['fond', 'perso', 'etiquette'] as $slot) {
 if ($skinVars): ?>
 <style>:root { <?php echo implode('; ', $skinVars); ?>; }</style>
 <?php endif; ?>
+<link rel="stylesheet" href="ui/playlist-colors.css?v=<?php echo $v('ui/playlist-colors.css'); ?>">
+<link rel="stylesheet" href="ui/import-guide.css?v=<?php echo $v('ui/import-guide.css'); ?>">
 </head>
 <body>
 <div class="app" id="app">
@@ -352,5 +354,6 @@ if ($skinVars): ?>
 <script src="ui/passkey.js?v=<?php echo $v('ui/passkey.js'); ?>"></script>
 <script src="ui/immersive.js?v=<?php echo $v('ui/immersive.js'); ?>"></script>
 <script src="ui/app.js?v=<?php echo $v('ui/app.js'); ?>"></script>
+<script src="ui/import-guide.js?v=<?php echo $v('ui/import-guide.js'); ?>"></script>
 </body>
 </html>

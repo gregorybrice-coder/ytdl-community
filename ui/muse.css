@@ -77,7 +77,6 @@
 .now-artist { color: var(--accent-text); font-family: var(--font-body); font-weight: 600; letter-spacing: .22em; }
 .now-title { font-style: italic; color: var(--text-strong); }
 .now-meta { color: var(--text-dim); }
-.now-rating button { color: rgba(74, 44, 28, .2); }
 .now-rating button.on { color: var(--gold); }
 .needle { background: var(--mahogany); box-shadow: 0 0 0 2px #fbf7f1; height: 5px; border-radius: 3px; }
 .disc-label span { font: italic 700 15px var(--font-display); letter-spacing: 0; }

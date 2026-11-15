@@ -43,9 +43,26 @@ if ($tracks) {
     }
 }
 
+// Mes fichiers que d'autres m'ont recommandés (partagés alors que je les
+// avais déjà, voir library-share.php) : « partagé par … » sur le titre.
+$recommendedBy = [];
+if ($tracks) {
+    $recoStmt = ytdl_db()->prepare(
+        "SELECT r.history_id, GROUP_CONCAT(u.name, ', ') AS names
+         FROM track_recommendations r JOIN users u ON u.id = r.sender_user_id
+         WHERE r.recipient_user_id = ? AND r.history_id IN ($placeholders)
+         GROUP BY r.history_id"
+    );
+    $recoStmt->execute(array_merge([$user['id']], $ids));
+    foreach ($recoStmt->fetchAll() as $row) {
+        $recommendedBy[$row['history_id']] = $row['names'];
+    }
+}
+
 foreach ($tracks as &$track) {
     $track['shared_with'] = $sharesByTrack[$track['id']] ?? [];
     $track['shared_count'] = count($track['shared_with']);
+    if (isset($recommendedBy[$track['id']])) $track['shared_by_name'] = $recommendedBy[$track['id']];
 }
 unset($track);
 
@@ -80,6 +97,14 @@ if ($sharedTracks) {
     $myShareStmt->execute(array_merge([$user['id']], $sharedIds));
     foreach ($myShareStmt->fetchAll() as $row) {
         $mySharesByTrack[$row['history_id']][] = (int)$row['shared_with_user_id'];
+    }
+    // Y compris la recommandation faite au propriétaire d'origine.
+    $myRecoStmt = ytdl_db()->prepare(
+        "SELECT history_id, recipient_user_id FROM track_recommendations WHERE sender_user_id = ? AND history_id IN ($sharedPlaceholders)"
+    );
+    $myRecoStmt->execute(array_merge([$user['id']], $sharedIds));
+    foreach ($myRecoStmt->fetchAll() as $row) {
+        $mySharesByTrack[$row['history_id']][] = (int)$row['recipient_user_id'];
     }
 }
 

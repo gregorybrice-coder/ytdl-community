@@ -1,0 +1,19 @@
+/* Playlists sur le disque : couleurs distinctes, communes à tous les skins. */
+.wheel-zone .wheel-item.is-playlist b,
+.deck.is-filtering .wheel-zone .wheel-item.is-playlist b {
+  display: inline-block;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--playlist-color, #88c9ff);
+  color: #17212b;
+  text-shadow: none;
+  box-shadow: 0 1px 5px #0003;
+  vertical-align: middle;
+}
+.wheel-zone .wheel-item.is-playlist.is-front b,
+.deck.is-filtering .wheel-zone .wheel-item.is-playlist.is-front b {
+  color: #101820;
+  text-shadow: none;
+  box-shadow: 0 0 0 2px #fff, 0 2px 8px #0005;
+}

@@ -93,7 +93,6 @@
 .brand span { color: var(--bh-red); }
 .now-artist { color: var(--bh-blue); font-family: var(--font-body); font-weight: 700; letter-spacing: .3em; }
 .now-title { color: var(--bh-black); }
-.now-rating button { color: rgba(21, 21, 21, .2); }
 .now-rating button.on { color: var(--bh-red); }
 
 .needle { background: var(--bh-black); height: 6px; border-radius: 0; box-shadow: none; width: 22px; }

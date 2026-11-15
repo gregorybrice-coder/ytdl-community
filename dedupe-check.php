@@ -1,4 +1,6 @@
 <?php
+// Ligne de commande uniquement (2026-11-11) : jamais exécutable par le web.
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 /**
  * Dédoublonnage physique après archivage — invoqué en arrière-plan par
  * ytdl_archive_job() (voir lib.php), jamais depuis une requête HTTP et

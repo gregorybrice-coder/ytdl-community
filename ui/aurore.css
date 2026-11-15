@@ -112,7 +112,6 @@
   filter: drop-shadow(0 2px 12px rgba(2, 8, 20, .85));
 }
 .now-meta { color: var(--text-dim); }
-.now-rating button { color: rgba(210, 245, 255, .22); }
 .now-rating button.on { color: var(--accent); text-shadow: 0 0 10px rgba(61, 255, 176, .7); }
 .needle { background: #fff; box-shadow: 0 0 0 2px rgba(3, 10, 22, .9), 0 0 14px var(--accent); height: 4px; border-radius: 2px; }
 .disc-label span { font: italic 700 17px var(--font-display); letter-spacing: .02em; }

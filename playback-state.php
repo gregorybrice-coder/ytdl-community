@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/library-access-lib.php';
 $user = ytdl_require_login();
 
 header('Content-Type: application/json');
@@ -48,6 +49,7 @@ if (!$hasAccess) {
     $accessStmt->execute([':id' => $historyId, ':uid' => $user['id']]);
     $hasAccess = $accessStmt->fetchColumn() !== false;
 }
+if (!$hasAccess) $hasAccess = ytdl_viewer_has_library_access($user['id'], (int)$ownerId);
 if (!$hasAccess) {
     ytdl_json_error("Tu n'as pas accès à ce fichier.", 403);
 }
