@@ -213,6 +213,14 @@ function ytdl_db(): PDO {
         if (!in_array($col, $dhCols, true)) $pdo->exec("ALTER TABLE download_history ADD COLUMN $col $type");
     }
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_download_history_genre ON download_history(genre)');
+    // Liste officielle des genres de MusicBrainz (environ 2 200) : sert à vérifier
+    // qu'un genre saisi n'existe pas déjà, et à le proposer pendant la saisie.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS genre_vocab (
+            match_key TEXT PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    ");
     // Genre trouvé pour un artiste dans les bases ouvertes (MusicBrainz, Wikidata) :
     // chaque artiste n'est interrogé qu'une fois, tous ses titres en profitent.
     $pdo->exec("

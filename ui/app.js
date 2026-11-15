@@ -1125,10 +1125,26 @@
 
   // Titre d'une bibliothèque consultée en lecture seule : on ne peut que
   // l'importer (un lien vers le fichier du propriétaire, sans copie).
+  // À l'ajout d'un titre : le genre de son artiste est cherché dans les bases
+  // musicales ouvertes (MusicBrainz, Wikidata) et PROPOSÉ ; sans réponse de
+  // l'utilisateur il est conservé, sinon on le change ou on en crée un.
+  async function proposeGenre(track) {
+    let s;
+    try { s = await Y.api.get('track-genre.php?suggest=1&id=' + encodeURIComponent(track.id)); }
+    catch (err) { return; } // bases injoignables : le classement se fera en arrière-plan
+    track.genre = s.genre;
+    const mine = library.tracks.find(t => t.id === track.id); if (mine) mine.genre = s.genre;
+    if (shownTrack === track) showNow(track, false);
+    if (s.found) toast('Genre proposé pour « ' + track.name + ' » : ' + s.genre, 10000, { label: 'Changer', run: () => openGenrePicker(track, s.genre) });
+    else toast('« ' + track.name + ' » : artiste inconnu des bases musicales', 10000, { label: 'Choisir un genre', run: () => openGenrePicker(track) });
+  }
+
   // Déplace un titre dans un autre genre (par ex. depuis « Inclassable ») : un
-  // genre déjà présent dans la bibliothèque, ou un nom saisi. Le choix est
-  // conservé : il n'est plus reclassé automatiquement.
-  function openGenrePicker(track) {
+  // genre déjà présent (bibliothèque ou liste officielle de MusicBrainz) ou un
+  // nouveau nom saisi. Un genre qui existe déjà n'est jamais recréé : la saisie
+  // est comparée pendant la frappe, et de nouveau par le serveur. Le choix est
+  // conservé : le titre n'est plus reclassé automatiquement.
+  function openGenrePicker(track, proposed) {
     const choose = async (g) => {
       g = (g || '').trim();
       if (!g) return;
@@ -1138,15 +1154,31 @@
       const mine = library.tracks.find(t => t.id === track.id); if (mine) mine.genre = res.genre; // la liste de la bibliothèque aussi
       closeSheet(); refreshWheel(true);
       if (shownTrack === track) showNow(track, false);
-      toast('« ' + track.name + ' » est maintenant dans « ' + res.genre + ' »');
+      toast(res.existed ? '« ' + track.name + ' » : le genre « ' + res.genre + ' » existait déjà, il est utilisé.' : '« ' + track.name + ' » : nouveau genre « ' + res.genre + ' » créé.', 6000);
     };
     const existing = [...genreCounts().keys()].sort((a, b) => (a === UNCLASSIFIED) - (b === UNCLASSIFIED) || a.localeCompare(b));
     if (!existing.includes(UNCLASSIFIED)) existing.push(UNCLASSIFIED);
-    const input = h('input', { class: 'field', placeholder: 'Ou saisis un genre (ex. Rap français)', maxlength: '40' });
+    const found = h('ul', { class: 'menu' });
+    const input = h('input', { class: 'field', placeholder: 'Un autre genre : cherche ou crée-le', maxlength: '40', autocomplete: 'off' });
+    let seq = 0, timer = null;
+    const paintFound = (list, q) => {
+      found.replaceChildren(...list.map(x => h('li', null, h('button', { type: 'button', onclick: () => choose(x.name) },
+        x.name + ' — existe déjà (' + (x.source === 'bibliothèque' ? 'dans ta bibliothèque' : 'liste de MusicBrainz') + ')'))));
+      if (q && !list.length) found.replaceChildren(h('li', null, h('i', { class: 'cookie-note' }, 'Aucun genre existant ne ressemble à « ' + q + ' » : « Utiliser ce genre » le créera.')));
+    };
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (!q) { found.replaceChildren(); return; }
+      timer = setTimeout(async () => {
+        const mySeq = ++seq;
+        try { const r = await Y.api.get('genre-search.php?q=' + encodeURIComponent(q)); if (mySeq === seq) paintFound(r.genres || [], q); } catch (err) {}
+      }, 250);
+    });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') choose(input.value); });
-    openSheet('Genre', h('p', null, track.name),
+    openSheet('Genre', h('p', null, track.name + (proposed ? ' — genre proposé : ' + proposed : '')),
       h('ul', { class: 'menu' }, existing.map(g => h('li', null, h('button', { type: 'button', 'aria-current': String(g === track.genre), onclick: () => choose(g) }, (g === track.genre ? '✓ ' : '') + g)))),
-      input, h('div', { class: 'row-btns' }, h('button', { type: 'button', class: 'btn primary', onclick: () => choose(input.value) }, 'Utiliser ce genre')));
+      input, found, h('div', { class: 'row-btns' }, h('button', { type: 'button', class: 'btn primary', onclick: () => choose(input.value) }, 'Utiliser ce genre')));
   }
 
   function openMoreRemote(track) {
@@ -1647,6 +1679,7 @@
       paintUsage();
       if (opts.toDevice && res.historyId) saveToDevice(res.historyId);
       const added = library.find(res.historyId);
+      if (added && !res.duplicate) proposeGenre(added);
       // Fenêtre « Ajouter » encore ouverte et plus rien en cours : elle se
       // referme et le titre se lance (morceau sur le disque, clip dans le
       // lecteur vidéo). Si on l'a fermée entre-temps, on n'interrompt rien :

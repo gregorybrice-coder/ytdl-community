@@ -18,6 +18,10 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) exit(0);
 
 $db = ytdl_db();
 $db->exec('PRAGMA busy_timeout = 15000');
+// Liste officielle des genres (anti-doublon, suggestions à la saisie) : une fois.
+if (ytdl_genre_vocab_count() === 0) {
+    try { ytdl_genre_vocab_load(); } catch (Throwable $e) { error_log('ytdl genre-worker (liste des genres) : ' . $e->getMessage()); }
+}
 $select = $db->prepare(
     "SELECT id, title, uploader FROM download_history
      WHERE library_path IS NOT NULL AND library_path <> '' AND genre_checked_at IS NULL AND COALESCE(genre_source, '') <> 'manuel'

@@ -49,15 +49,21 @@ function ytdl_genre_same_name(string $a, string $b): bool {
 
 /** Appel JSON d'un service ouvert ; réessaie si le service est occupé. Lève RuntimeException s'il reste indisponible. */
 function ytdl_genre_http(string $url, float $minGap = 1.1): array {
-    static $last = 0.0;
     $ctx = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true, 'header' => 'User-Agent: ' . YTDL_GENRE_UA . "\r\nAccept: application/json\r\n"]]);
+    // Politesse : MusicBrainz demande au plus une requête par seconde. L'heure de
+    // la dernière requête est partagée entre TOUS les processus (classement en
+    // arrière-plan, proposition à l'ajout…) par un verrou sur un fichier.
+    $lock = fopen(sys_get_temp_dir() . '/ytdl-genre-http.lock', 'c+');
     foreach ([0, 5, 15, 40] as $wait) {
         if ($wait) sleep($wait);
-        // Politesse : MusicBrainz demande au plus une requête par seconde.
+        flock($lock, LOCK_EX);
+        rewind($lock);
+        $last = (float)stream_get_contents($lock);
         $gap = $minGap - (microtime(true) - $last);
         if ($gap > 0) usleep((int)($gap * 1000000));
         $raw = @file_get_contents($url, false, $ctx);
-        $last = microtime(true);
+        ftruncate($lock, 0); rewind($lock); fwrite($lock, (string)microtime(true)); fflush($lock);
+        flock($lock, LOCK_UN);
         $code = 0;
         foreach (($http_response_header ?? []) as $h) if (preg_match('#^HTTP/\S+\s+(\d{3})#', $h, $m)) $code = (int)$m[1];
         if ($code === 200 && $raw !== false && is_array($data = json_decode($raw, true))) return $data;
@@ -143,13 +149,81 @@ function ytdl_genre_pending_count(): int {
 }
 
 /** Lance le processus de classement s'il reste des titres (un seul tourne à la fois : verrou dans le worker). */
-function ytdl_genre_spawn(): void {
+function ytdl_genre_spawn(bool $force = false): void {
     $stamp = sys_get_temp_dir() . '/ytdl-genre-spawn.stamp';
     if (is_file($stamp) && time() - filemtime($stamp) < 60) return; // pas plus d'un lancement par minute
-    if (ytdl_genre_pending_count() === 0) return;
+    if (!$force && ytdl_genre_pending_count() === 0) return;
     @touch($stamp);
     $php = ytdl_which('php');
     if (!$php) return;
     $log = sys_get_temp_dir() . '/ytdl-genre.log';
     exec(sprintf('nohup %s %s >> %s 2>&1 &', escapeshellarg($php), escapeshellarg(__DIR__ . '/genre-worker.php'), escapeshellarg($log)));
+}
+
+
+/** Clé de comparaison de deux noms de genre : sans casse, accents, espaces ni ponctuation (« Hip-hop » = « hip hop »). */
+function ytdl_genre_match_key(string $s): string {
+    $t = function_exists('transliterator_transliterate') ? (string)transliterator_transliterate('Any-Latin; Latin-ASCII; Lower()', $s) : mb_strtolower($s);
+    return preg_replace('/[^a-z0-9]+/', '', $t);
+}
+
+/** Télécharge la liste officielle des genres de MusicBrainz (une page de 100 par requête). */
+function ytdl_genre_vocab_load(): int {
+    $db = ytdl_db();
+    $insert = $db->prepare('INSERT OR REPLACE INTO genre_vocab (match_key, name) VALUES (:k, :n)');
+    $offset = 0; $n = 0;
+    do {
+        $page = ytdl_genre_http('https://musicbrainz.org/ws/2/genre/all?fmt=json&limit=100&offset=' . $offset);
+        $genres = $page['genres'] ?? [];
+        foreach ($genres as $g) {
+            $name = ytdl_genre_clean((string)($g['name'] ?? ''));
+            $key = $name !== null ? ytdl_genre_match_key($name) : '';
+            if ($key !== '') { $insert->execute([':k' => $key, ':n' => $name]); $n++; }
+        }
+        $offset += 100;
+    } while ($genres && $offset < (int)($page['genre-count'] ?? 0));
+    return $n;
+}
+
+function ytdl_genre_vocab_count(): int {
+    return (int)ytdl_db()->query('SELECT COUNT(*) FROM genre_vocab')->fetchColumn();
+}
+
+/** Genres déjà utilisés dans la bibliothèque (tous comptes), du plus au moins fréquent. */
+function ytdl_genre_used(): array {
+    return ytdl_db()->query("SELECT genre FROM download_history WHERE genre IS NOT NULL AND library_path IS NOT NULL GROUP BY genre ORDER BY COUNT(*) DESC")->fetchAll(PDO::FETCH_COLUMN);
+}
+
+/**
+ * Ce genre existe-t-il déjà ? Renvoie son nom exact (celui de la bibliothèque,
+ * sinon celui de MusicBrainz), ou null s'il est nouveau.
+ */
+function ytdl_genre_existing(string $genre): ?string {
+    $key = ytdl_genre_match_key($genre);
+    if ($key === '') return null;
+    foreach (ytdl_genre_used() as $g) if (ytdl_genre_match_key($g) === $key) return $g;
+    $st = ytdl_db()->prepare('SELECT name FROM genre_vocab WHERE match_key = :k');
+    $st->execute([':k' => $key]);
+    $name = $st->fetchColumn();
+    return $name !== false ? $name : null;
+}
+
+/** Genres commençant par / contenant la saisie : bibliothèque d'abord, puis liste de MusicBrainz. */
+function ytdl_genre_search(string $q, int $limit = 8): array {
+    $key = ytdl_genre_match_key($q);
+    if ($key === '') return [];
+    $out = [];
+    foreach (ytdl_genre_used() as $g) {
+        if (str_contains(ytdl_genre_match_key($g), $key)) $out[$g] = 'bibliothèque';
+    }
+    $st = ytdl_db()->prepare("SELECT name FROM genre_vocab WHERE match_key LIKE :like ORDER BY (match_key LIKE :pre) DESC, LENGTH(match_key) LIMIT 30");
+    $st->execute([':like' => '%' . $key . '%', ':pre' => $key . '%']);
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $name) {
+        $known = false;
+        foreach (array_keys($out) as $g) if (ytdl_genre_match_key($g) === ytdl_genre_match_key($name)) { $known = true; break; }
+        if (!$known) $out[$name] = 'musicbrainz';
+    }
+    $res = [];
+    foreach ($out as $name => $src) { $res[] = ['name' => $name, 'source' => $src]; if (count($res) >= $limit) break; }
+    return $res;
 }
