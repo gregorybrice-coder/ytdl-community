@@ -115,7 +115,7 @@ sh maintenance.sh off
 
 Ces commandes utilisent `YTDL_DATA_DIR`. L’administrateur garde accès à l’application. Sauvegardez le dossier privé et la bibliothèque ensemble ; une base SQLite active doit être sauvegardée avec une méthode adaptée à SQLite/WAL.
 
-Le script facultatif `install-cookies.sh` exporte les cookies du navigateur choisi vers le stockage privé. Exécutez-le vous-même après lecture du script. Aucun cookie n’est fourni ni requis pour démarrer l’application.
+Le script facultatif `install-cookies.php` renouvelle les cookies YouTube depuis le navigateur choisi (`php install-cookies.php` pour Chrome, `php install-cookies.php firefox`) ou depuis un fichier `cookies.txt`. Seuls les cookies de YouTube et Google sont conservés, et rien n’est installé sans avoir été accepté par YouTube. Lancez-le depuis un terminal ouvert dans votre session (Chrome demande une autorisation du trousseau macOS à l’écran). La même opération est proposée dans l’administration. Aucun cookie n’est fourni ni requis pour démarrer l’application.
 
 Les outils `migrate-*.php`, `admin-clean-titles.php` et `archive-artists.php` viennent de l’application historique. Ils ne sont pas requis pour une installation neuve ; vérifiez leur comportement sur une sauvegarde avant toute maintenance de données.
 

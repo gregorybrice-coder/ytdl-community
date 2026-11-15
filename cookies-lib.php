@@ -2,7 +2,7 @@
 /**
  * Cookies YouTube du serveur (voir ytdl_cookies_path dans lib.php) : état,
  * test, renouvellement depuis un navigateur du Mac (équivalent de
- * install-cookies.sh) ou depuis un fichier cookies.txt envoyé. Utilisé par
+ * install-cookies.php) ou depuis un fichier cookies.txt envoyé. Utilisé par
  * admin-cookies.php, donc réservé à l'administrateur.
  *
  * Rien n'est installé sans avoir été testé : un fichier qui ne passe pas la
@@ -135,7 +135,7 @@ function ytdl_cookies_install(string $text): array {
     return ['ok' => true, 'message' => 'Cookies renouvelés et vérifiés par YouTube (' . ytdl_cookies_count($text) . ' cookies). Les téléchargements les utilisent tout de suite.'];
 }
 
-/** Exporte les cookies d'un navigateur du Mac (équivalent de install-cookies.sh), puis les installe. */
+/** Exporte les cookies d'un navigateur du Mac (équivalent de install-cookies.php), puis les installe. */
 function ytdl_cookies_from_browser(string $browser): array {
     if (!in_array($browser, ['chrome', 'firefox'], true)) return ['ok' => false, 'message' => 'Navigateur non pris en charge.'];
     $ytDlp = ytdl_which('yt-dlp');
@@ -151,7 +151,7 @@ function ytdl_cookies_from_browser(string $browser): array {
     if ($timedOut) return ['ok' => false, 'message' => 'Délai dépassé : l’autorisation du trousseau macOS n’a pas été donnée à temps.'];
     if ($text === '') {
         $hint = stripos($err, 'find-generic-password') !== false || stripos($err, 'keychain') !== false
-            ? ' macOS n’a pas autorisé l’accès au trousseau depuis le serveur : lance plutôt « sh install-cookies.sh » dans Terminal.app, ou envoie un fichier cookies.txt ci-dessous.'
+            ? ' macOS n’a pas autorisé l’accès au trousseau depuis le serveur : lance plutôt « php install-cookies.php » dans Terminal.app, ou envoie un fichier cookies.txt ci-dessous.'
             : '';
         return ['ok' => false, 'message' => 'Aucun cookie n’a pu être lu depuis ' . ($browser === 'chrome' ? 'Chrome' : 'Firefox') . '.' . $hint];
     }
