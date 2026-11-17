@@ -337,6 +337,10 @@
     sharing: false,   // MON partage
     list: [],         // ceux qui écoutent et partagent, hors moi
     listeners: [],    // ceux qui écoutent avec moi (quand je partage)
+    invites: [],      // ceux qui m'invitent à écouter avec eux
+    invitesSeen: new Set(),
+    // J'invite ce compte à écouter avec moi (notification push + invitation dans son appli).
+    invite(userId) { return api.json('listen-live.php', { invite: userId }); },
     // following : identifiant du compte que je suis (signalé à lui, voir listen-live.php).
     async refresh(following) {
       let data;
@@ -345,6 +349,12 @@
       this.list = (data.live || []).map(x => Object.assign({}, x, { receivedAt: performance.now() }));
       const before = new Set(this.listeners.map(l => l.user_id));
       this.listeners = data.listeners || [];
+      // Invitations à écouter avec quelqu'un : annoncées une seule fois chacune.
+      this.invites = data.invites || [];
+      const fresh = this.invites.filter(i => !this.invitesSeen.has(i.user_id));
+      fresh.forEach(i => this.invitesSeen.add(i.user_id));
+      this.invitesSeen.forEach(id => { if (!this.invites.some(i => i.user_id === id)) this.invitesSeen.delete(id); });
+      if (fresh.length) this.emit('invited', fresh);
       const joined = this.listeners.filter(l => !before.has(l.user_id));
       this.emit('change');
       if (joined.length) this.emit('joined', joined);
@@ -769,6 +779,13 @@
     const db = Number(gainDb);
     n.norm.gain.value = Number.isFinite(db) ? Math.pow(10, db / 20) : 1;
   }
+  // Safari ignore element.volume dès qu'un élément passe par Web Audio : la barre de volume
+  // native d'un <video> ne change alors plus rien. On la recopie sur le gain (Chrome et
+  // Firefox appliquent déjà le volume de l'élément : y toucher le compterait deux fois).
+  function linkNativeVolume(el) {
+    if (!/^((?!chrome|chromium|android).)*safari/i.test(navigator.userAgent)) return;
+    el.addEventListener('volumechange', () => { const n = graph(el); if (n) n.vol.gain.value = el.muted ? 0 : el.volume; });
+  }
   function setVol(el, v) { const n = graph(el); if (n) { n.vol.gain.cancelScheduledValues(0); n.vol.gain.value = v; } else el.volume = v; }
   function ramp(el, target, ms) {
     const n = graph(el);
@@ -936,7 +953,7 @@
 
   window.Ytdl = {
     boot: BOOT, api, ApiError, prefs, deviceId, splitArtistTitle, fmtTime, clamp, emitter,
-    normalize: applyGain,
+    normalize: applyGain, linkNativeVolume,
     library, access, live, account, sortTracks, filterTracks, player, lyrics, artistInfo, lastPlayback, download, youtubeSearch, resolvePlaylist,
   };
 })();

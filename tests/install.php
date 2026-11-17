@@ -44,6 +44,7 @@ try {
  [$status]=runPhp([$root.'/genre-worker.php']);check($status===0,'Classement des genres : aucun titre à traiter, sortie sans erreur');
  check($db->query('SELECT share_listening FROM users LIMIT 1')!==false&&$db->query('SELECT updated_ts FROM playback_state LIMIT 1')!==false,'Colonnes du partage de l’écoute présentes sur base neuve');
  check($db->query('SELECT listener_id, host_id, updated_ts FROM listen_along LIMIT 1')!==false,'Table des auditeurs de l’écoute partagée présente sur base neuve');
+ check($db->query('SELECT host_id, guest_id, created_ts FROM listen_invites LIMIT 1')!==false,'Table des invitations à l’écoute partagée présente sur base neuve');
  require_once $root.'/library-access-lib.php';
  check(ytdl_track_is_live_shared(1)===false,'Aucun titre n’est partagé par défaut');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');

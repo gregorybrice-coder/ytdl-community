@@ -9,7 +9,8 @@
  *        (titres ET clips : track.audio_only vaut 0 pour un clip)
  *        position + age = où en est l'auditeur À L'INSTANT de la réponse.
  *        ?following=ID : signale que j'écoute avec ce compte ; « listeners » = ceux qui écoutent avec moi.
- * POST : { enabled: bool } — active ou coupe MON partage ; { leave: true } — j'arrête d'écouter avec quelqu'un.
+ * POST : { invite: ID } — invite ce compte à écouter avec moi (push + invitation) ;
+ *        { enabled: bool } — active ou coupe MON partage ; { leave: true } — j'arrête d'écouter avec quelqu'un.
  */
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/auth.php';
@@ -28,6 +29,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['ok' => true]);
         exit;
     }
+    // J'invite quelqu'un à écouter avec moi : notification push + invitation à son ouverture de l'appli.
+    if (!empty($p['invite'])) {
+        $guest = (int)$p['invite'];
+        $me_row = $db->prepare('SELECT share_listening FROM users WHERE id = :id');
+        $me_row->execute([':id' => $me]);
+        if ((int)$me_row->fetchColumn() !== 1) ytdl_json_error('Active d\'abord « Partager ce que j\'écoute ».', 400);
+        $g = $db->prepare("SELECT name FROM users WHERE id = :id AND status = 'active' AND id <> :me");
+        $g->execute([':id' => $guest, ':me' => $me]);
+        if ($g->fetchColumn() === false) ytdl_json_error('Compte introuvable.', 404);
+        $cur = $db->prepare("SELECT dh.title, dh.audio_only FROM playback_state ps JOIN download_history dh ON dh.id = ps.history_id
+                             WHERE ps.user_id = :me AND ps.is_playing = 1 AND ps.updated_ts > :since AND dh.library_path IS NOT NULL AND dh.library_path <> ''");
+        $cur->execute([':me' => $me, ':since' => microtime(true) - 90]);
+        $row = $cur->fetch(PDO::FETCH_ASSOC);
+        if (!$row) ytdl_json_error('Lance d\'abord un titre ou un clip.', 400);
+        $last = $db->prepare('SELECT created_ts FROM listen_invites WHERE host_id = :me AND guest_id = :g');
+        $last->execute([':me' => $me, ':g' => $guest]);
+        $ts = $last->fetchColumn();
+        if ($ts !== false && microtime(true) - (float)$ts < 60) ytdl_json_error('Invitation déjà envoyée il y a un instant.', 429);
+        $db->prepare('INSERT INTO listen_invites (host_id, guest_id, created_ts) VALUES (:me, :g, :ts)
+                      ON CONFLICT(host_id, guest_id) DO UPDATE SET created_ts = :ts2')
+           ->execute([':me' => $me, ':g' => $guest, ':ts' => microtime(true), ':ts2' => microtime(true)]);
+        $clip = (int)$row['audio_only'] !== 1;
+        try {
+            ytdl_send_push($guest, 'Écoute partagée', $user['name'] . ' t\'invite à ' . ($clip ? 'regarder le clip' : 'écouter') . ' « ' . $row['title'] . ' » avec lui.', ['url' => '/ytdl/capture.php']);
+        } catch (\Throwable $e) { /* jamais bloquant */ }
+        echo json_encode(['ok' => true]);
+        exit;
+    }
     $on = !empty($p['enabled']) ? 1 : 0;
     $db->prepare('UPDATE users SET share_listening = :v WHERE id = :id')->execute([':v' => $on, ':id' => $me]);
     // Partage coupé : plus personne n'écoute avec moi.
@@ -43,6 +72,8 @@ if ($following > 0 && $following !== $me) {
     $chk = $db->prepare("SELECT 1 FROM users WHERE id = :id AND share_listening = 1 AND status = 'active'");
     $chk->execute([':id' => $following]);
     if ($chk->fetchColumn() !== false) {
+        // J'ai rejoint : l'invitation de cet hôte est consommée.
+        $db->prepare('DELETE FROM listen_invites WHERE host_id = :h AND guest_id = :me')->execute([':h' => $following, ':me' => $me]);
         $db->prepare('INSERT INTO listen_along (listener_id, host_id, updated_ts) VALUES (:me, :h, :ts)
                       ON CONFLICT(listener_id) DO UPDATE SET host_id = :h2, updated_ts = :ts2')
            ->execute([':me' => $me, ':h' => $following, ':ts' => microtime(true), ':h2' => $following, ':ts2' => microtime(true)]);
@@ -97,4 +128,12 @@ if ($sharing) {
     $ls->execute([':me' => $me, ':since' => $now - 15]);
     $listeners = array_map(fn($r) => ['user_id' => (int)$r['user_id'], 'name' => $r['name'], 'avatar' => $r['avatar']], $ls->fetchAll(PDO::FETCH_ASSOC));
 }
-echo json_encode(['sharing' => $sharing, 'live' => $live, 'listeners' => $listeners]);
+// Invitations reçues (moins de 10 min) d'un compte qui partage et lit encore quelque chose.
+$invites = [];
+$liveIds = array_flip(array_column($live, 'user_id'));
+$iv = $db->prepare('SELECT u.id AS user_id, u.name FROM listen_invites li JOIN users u ON u.id = li.host_id WHERE li.guest_id = :me AND li.created_ts > :since');
+$iv->execute([':me' => $me, ':since' => $now - 600]);
+foreach ($iv->fetchAll(PDO::FETCH_ASSOC) as $r) {
+    if (isset($liveIds[(int)$r['user_id']])) $invites[] = ['user_id' => (int)$r['user_id'], 'name' => $r['name']];
+}
+echo json_encode(['sharing' => $sharing, 'live' => $live, 'listeners' => $listeners, 'invites' => $invites]);

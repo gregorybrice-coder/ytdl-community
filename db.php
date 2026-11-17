@@ -468,6 +468,16 @@ function ytdl_db(): PDO {
             updated_ts REAL NOT NULL
         )
     ");
+    // Invitations à écouter avec quelqu'un (listen-live.php) : une par couple hôte/invité,
+    // valable 10 minutes ; l'invité la voit à l'ouverture de l'appli (et par notification push).
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS listen_invites (
+            host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            guest_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_ts REAL NOT NULL,
+            PRIMARY KEY (host_id, guest_id)
+        )
+    ");
     // « Partager ce que j'écoute » (listen-live.php) : désactivé par défaut,
     // chacun l'active pour lui-même.
     if (!in_array('share_listening', $userCols, true)) {

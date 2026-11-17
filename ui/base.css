@@ -676,3 +676,4 @@ a { color: var(--accent-text); }
   .sheet { margin: auto; border-radius: 26px; border: 1px solid rgba(var(--edge-rgb), .2); }
   .toast { bottom: 120px; }
 }
+.live-invite-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }

@@ -2033,11 +2033,13 @@
   // ------------------------------------------------------------------ clip
 
   const video = $('video');
+  Y.linkNativeVolume(video); // la barre de volume du clip agit aussi sous Safari
   let videoList = [], videoEntry = null, videoTrack = null, videoSync = null;
-  function openVideo(track, list, startAt) {
+  // relay : le son passe par le lecteur audio (écran éteint, autre appli) ; le clip est seulement préparé, sans lecture.
+  function openVideo(track, list, startAt, relay) {
     // Autre clip choisi par l'utilisateur pendant un suivi : il quitte l'écoute partagée.
     if (follow.id != null && track.id !== follow.trackId && performance.now() > follow.ignoreUntil) stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.');
-    player.pause();
+    if (!relay) { clipAudio = false; player.pause(); }
     stopPreview();
     if (videoSync) videoSync.exit(null);
     videoList = list && list.length ? list : [track];
@@ -2057,7 +2059,7 @@
     }
     Y.normalize(video, track.gain_db);
     $('video-layer').hidden = false;
-    video.play().catch(() => {});
+    if (!relay) video.play().catch(() => {});
     videoEntry = null;
     $('video-lyrics').textContent = '';
     paintVideoTools();
@@ -2081,12 +2083,45 @@
     // Fermer le clip soi-même pendant un suivi = quitter l'écoute partagée.
     if (follow.id != null && videoTrack && performance.now() > follow.ignoreUntil) stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.');
     if (videoSync) videoSync.exit(null);
+    clipAudio = false;
     video.pause(); video.removeAttribute('src'); video.load();
     $('video-layer').hidden = true; videoTrack = null;
     Y.live.save(true); // le partage repasse sur le lecteur audio
   }
+  // Écran éteint ou autre appli : le téléphone coupe la vidéo mais pas le son d'un lecteur audio.
+  // Le son du clip passe alors sur le lecteur audio (même fichier, même seconde) ; au retour
+  // dans l'appli, le clip reprend là où le son en est.
+  let clipAudio = false, videoPausedAt = 0;
+  function clipToAudio() {
+    if (!videoTrack || clipAudio || videoSync || video.ended || !document.hidden) return;
+    const pos = video.currentTime;
+    clipAudio = true;
+    if (typeof ignoreMoves === 'function') ignoreMoves(8000);
+    player.setQueue([videoTrack], 0, { startAt: pos });
+  }
+  function clipFromAudio() {
+    if (!clipAudio) return;
+    clipAudio = false;
+    if (!videoTrack) return;
+    const wasPlaying = player.playing, pos = player.currentTime;
+    ignoreMoves(8000);
+    player.pause();
+    if (pos > 0) { try { video.currentTime = pos; } catch (err) {} }
+    if (wasPlaying) video.play().catch(() => {});
+  }
+  video.addEventListener('pause', () => {
+    videoPausedAt = performance.now();
+    // Pause venue du système (écran verrouillé) et non de l'utilisateur : la page est masquée juste après.
+    setTimeout(() => { if (document.hidden && video.paused) clipToAudio(); }, 150);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (video.paused && performance.now() - videoPausedAt < 1500) clipToAudio(); }
+    else clipFromAudio();
+  });
   // Partage de l'écoute : le clip affiché est ce qu'on enregistre (position toutes les 4 s, au déplacement, à la pause).
-  Y.live.setClipSource(() => videoTrack ? { track: videoTrack, position: video.currentTime, playing: !video.paused && !video.ended } : null);
+  Y.live.setClipSource(() => !videoTrack ? null
+    : clipAudio ? { track: videoTrack, position: player.currentTime, playing: player.playing }
+    : { track: videoTrack, position: video.currentTime, playing: !video.paused && !video.ended });
   video.addEventListener('timeupdate', () => Y.live.save(false));
   ['play', 'pause', 'seeked', 'ended'].forEach(ev => video.addEventListener(ev, () => { if (videoTrack) Y.live.save(true); }));
   $('video-close').addEventListener('click', closeVideo);
@@ -2250,6 +2285,10 @@
   }
   Y.live.on('change', paintLive);
   // Quelqu'un se met à écouter avec moi : un petit message, sans bouton ni son.
+  Y.live.on('invited', (list) => {
+    const i = list[0];
+    toast(i.name + ' t\'invite à écouter avec ' + (list.length > 1 ? 'lui (et ' + (list.length - 1) + ' autre' + (list.length > 2 ? 's' : '') + ')' : 'lui') + '.', 12000, { label: 'Rejoindre', run: () => listenAlong(i.user_id) });
+  });
   Y.live.on('joined', (list) => toast(list.map(l => l.name).join(', ') + (list.length > 1 ? ' écoutent' : ' écoute') + ' avec toi.', 4000));
 
   // Rejoint l'écoute de quelqu'un : même titre, même seconde, puis la SUIT : quand
@@ -2266,6 +2305,11 @@
     ignoreMoves(6000);
     if (t.isAudio) {
       if (videoTrack) closeVideo(); // il est repassé d'un clip à un morceau
+      player.setQueue([t], 0, { startAt: () => { ignoreMoves(); return Y.live.positionOf(f); } });
+    } else if (clipAudio || document.hidden) {
+      // Appli en arrière-plan : le son suit sur le lecteur audio, le clip est prêt pour le retour.
+      clipAudio = true;
+      openVideo(t, [t], null, true);
       player.setQueue([t], 0, { startAt: () => { ignoreMoves(); return Y.live.positionOf(f); } });
     } else {
       openVideo(t, [t], () => { ignoreMoves(); return Y.live.positionOf(f); }); // un clip : le même, à la même seconde
@@ -2301,7 +2345,7 @@
       if (!cur || cur.id !== f.track.id) {
         const t = playLive(f);
         toast(follow.name + ' est passé à « ' + t.name + ' ».', 3500);
-      } else if (videoTrack) {
+      } else if (videoTrack && !clipAudio) {
         const target = Y.live.positionOf(f);
         if (returned || video.paused) { ignoreMoves(); video.currentTime = target; video.play().catch(() => {}); }
         else if (Math.abs(video.currentTime - target) > 2.5) { ignoreMoves(); video.currentTime = target; }
@@ -2361,7 +2405,22 @@
       h('p', null, 'Active le partage pour que les autres voient ce que tu écoutes et puissent l\'écouter avec toi, à la même seconde. Seul le titre en cours est concerné.'),
       h('label', { class: 'switch' }, h('span', null, 'Partager ce que j\'écoute'), sw),
       L.sharing && L.listeners.length ? h('p', { class: 'live-listeners' }, '● ' + L.listeners.map(l => l.name).join(', ') + (L.listeners.length > 1 ? ' écoutent' : ' écoute') + ' avec toi en ce moment.') : null,
+      L.sharing ? inviteBox() : null,
       h('h3', null, 'En ce moment'), list);
+    if (L.sharing && !liveUsers) Y.api.get('users-list.php').then(d => { liveUsers = d.users || []; if (sheet.open && $('sheet-title').textContent === 'Écoute partagée') renderLive(); }).catch(() => {});
+  }
+  // « Inviter » : une notification (et une invitation dans l'appli) pour quelqu'un, qui lui permet de rejoindre mon écoute d'un toucher.
+  let liveUsers = null;
+  function inviteBox() {
+    if (!liveUsers || !liveUsers.length) return null;
+    return h('div', { class: 'live-invite' },
+      h('h3', null, 'Inviter à écouter avec moi'),
+      h('div', { class: 'live-invite-list' }, liveUsers.map(u => h('button', { type: 'button', class: 'btn', onclick: async (e) => {
+        const b = e.currentTarget; b.disabled = true;
+        try { await Y.live.invite(u.id); toast('Invitation envoyée à ' + u.name + '.', 3000); }
+        catch (err) { toast(err.message); }
+        setTimeout(() => { b.disabled = false; }, 4000);
+      } }, u.name))));
   }
   async function openLive() {
     await Y.live.refresh();
