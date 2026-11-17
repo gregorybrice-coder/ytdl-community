@@ -350,6 +350,10 @@
       if (joined.length) this.emit('joined', joined);
       return data;
     },
+    // Un clip est-il affiché ? fn() -> { track, position, playing } ou null.
+    setClipSource(fn) { clipSource = fn; },
+    // Enregistre l'état maintenant (ou au rythme habituel si force est faux) : utilisé par le lecteur de clip.
+    save(force) { if (shareListening) saveState(!!force); },
     // J'arrête d'écouter avec quelqu'un.
     leave() { return api.json('listen-live.php', { leave: true }).catch(() => {}); },
     async setSharing(on) {
@@ -811,16 +815,21 @@
   // jamais le 0 provisoire du lecteur.
   let resumeAt = 0;
   elements.forEach(el => el.addEventListener('playing', () => { resumeAt = 0; }));
+  // Clip affiché par-dessus le lecteur audio (app.js le déclare via live.clipSource) :
+  // pendant le partage, c'est lui qu'on enregistre, pour que les autres le voient.
+  let clipSource = null;
   function saveState(force, position) {
-    const track = player.track;
-    if (!(position > 0) && resumeAt > 0 && !player.playing && player.currentTime < 1) position = resumeAt;
+    const clip = shareListening && clipSource ? clipSource() : null;
+    const track = clip ? clip.track : player.track;
+    if (clip) position = clip.position;
+    else if (!(position > 0) && resumeAt > 0 && !player.playing && player.currentTime < 1) position = resumeAt;
     if (!track) return;
     const now = Date.now();
     if (!force && now - lastSave < (shareListening ? 4000 : 10000)) return;
     lastSave = now;
     const body = JSON.stringify({
       history_id: track.id, position_seconds: Math.max(0, position > 0 ? position : player.currentTime),
-      device_id: deviceId(), is_playing: player.playing, playlist_id: player.playlistId,
+      device_id: deviceId(), is_playing: clip ? clip.playing : player.playing, playlist_id: clip ? null : player.playlistId,
     });
     try { localStorage.setItem('ytdl_last_media_' + (BOOT.id || 0), body); } catch (err) {}
     fetch('playback-state.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});

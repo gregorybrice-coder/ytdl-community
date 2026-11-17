@@ -2034,7 +2034,9 @@
 
   const video = $('video');
   let videoList = [], videoEntry = null, videoTrack = null, videoSync = null;
-  function openVideo(track, list) {
+  function openVideo(track, list, startAt) {
+    // Autre clip choisi par l'utilisateur pendant un suivi : il quitte l'écoute partagée.
+    if (follow.id != null && track.id !== follow.trackId && performance.now() > follow.ignoreUntil) stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.');
     player.pause();
     stopPreview();
     if (videoSync) videoSync.exit(null);
@@ -2044,6 +2046,15 @@
     $('video-title').textContent = track.name;
     $('video-download').href = Y.api.downloadUrl(track.id);
     video.src = Y.api.streamUrl(track.id);
+    if (startAt) {
+      // startAt peut être une fonction : calculée quand le fichier est prêt (le temps de chargement est rattrapé).
+      const once = () => {
+        video.removeEventListener('loadedmetadata', once);
+        const t = typeof startAt === 'function' ? startAt() : startAt;
+        if (t > 0) { try { video.currentTime = t; } catch (err) {} }
+      };
+      video.addEventListener('loadedmetadata', once);
+    }
     Y.normalize(video, track.gain_db);
     $('video-layer').hidden = false;
     video.play().catch(() => {});
@@ -2067,10 +2078,17 @@
     $('video-lyr-offset').textContent = o ? (o > 0 ? '+' : '') + o.toFixed(1).replace('.', ',') + ' s' : 'calé';
   }
   function closeVideo() {
+    // Fermer le clip soi-même pendant un suivi = quitter l'écoute partagée.
+    if (follow.id != null && videoTrack && performance.now() > follow.ignoreUntil) stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.');
     if (videoSync) videoSync.exit(null);
     video.pause(); video.removeAttribute('src'); video.load();
     $('video-layer').hidden = true; videoTrack = null;
+    Y.live.save(true); // le partage repasse sur le lecteur audio
   }
+  // Partage de l'écoute : le clip affiché est ce qu'on enregistre (position toutes les 4 s, au déplacement, à la pause).
+  Y.live.setClipSource(() => videoTrack ? { track: videoTrack, position: video.currentTime, playing: !video.paused && !video.ended } : null);
+  video.addEventListener('timeupdate', () => Y.live.save(false));
+  ['play', 'pause', 'seeked', 'ended'].forEach(ev => video.addEventListener(ev, () => { if (videoTrack) Y.live.save(true); }));
   $('video-close').addEventListener('click', closeVideo);
   // Partager le clip affiché, comme un morceau depuis le titre en cours.
   $('video-share').addEventListener('click', () => { if (videoTrack) openShare(videoTrack); });
@@ -2245,8 +2263,13 @@
   function playLive(f) {
     const t = Y.live.track(f.track);
     follow.trackId = f.track.id;
-    ignoreMoves();
-    player.setQueue([t], 0, { startAt: () => Y.live.positionOf(f) });
+    ignoreMoves(6000);
+    if (t.isAudio) {
+      if (videoTrack) closeVideo(); // il est repassé d'un clip à un morceau
+      player.setQueue([t], 0, { startAt: () => { ignoreMoves(); return Y.live.positionOf(f); } });
+    } else {
+      openVideo(t, [t], () => { ignoreMoves(); return Y.live.positionOf(f); }); // un clip : le même, à la même seconde
+    }
     return t;
   }
   function stopFollow(message) {
@@ -2268,15 +2291,20 @@
     if (!f) {
       // Plus de lecture en cours chez lui : pause, ou arrêt du partage. On attend son retour.
       follow.missing++;
-      if (follow.missing === 2 && player.playing) { ignoreMoves(); player.pause(); toast(follow.name + ' ne lit plus rien : en attente de son retour.', 5000, { label: 'Arrêter de suivre', run: () => stopFollow() }); }
+      if (follow.missing === 2 && (player.playing || (videoTrack && !video.paused))) { ignoreMoves(); player.pause(); if (videoTrack) video.pause(); toast(follow.name + ' ne lit plus rien : en attente de son retour.', 5000, { label: 'Arrêter de suivre', run: () => stopFollow() }); }
       if (performance.now() - follow.lastSeen > 5 * 60 * 1000) { stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.'); return; }
     } else {
       follow.lastSeen = performance.now();
       const returned = follow.missing >= 2;
       follow.missing = 0;
-      if (!player.track || player.track.id !== f.track.id) {
+      const cur = videoTrack || player.track; // le clip affiché, sinon le morceau en cours
+      if (!cur || cur.id !== f.track.id) {
         const t = playLive(f);
         toast(follow.name + ' est passé à « ' + t.name + ' ».', 3500);
+      } else if (videoTrack) {
+        const target = Y.live.positionOf(f);
+        if (returned || video.paused) { ignoreMoves(); video.currentTime = target; video.play().catch(() => {}); }
+        else if (Math.abs(video.currentTime - target) > 2.5) { ignoreMoves(); video.currentTime = target; }
       } else {
         const target = Y.live.positionOf(f);
         if (returned || !player.playing) { ignoreMoves(); player.seek(target); player.play(); }
@@ -2293,6 +2321,11 @@
     if (player.duration && player.currentTime >= player.duration - 1.5) { clearTimeout(follow.timer); follow.timer = setTimeout(followTick, 600); return; }
     stopFollow('Tu as mis en pause : tu n\'écoutes plus avec ' + follow.name + '.');
   });
+  video.addEventListener('pause', () => {
+    if (follow.id == null || !videoTrack || performance.now() < follow.ignoreUntil) return;
+    if (video.ended) { clearTimeout(follow.timer); follow.timer = setTimeout(followTick, 600); return; } // fin naturelle : on cherche la suite
+    stopFollow('Tu as mis en pause : tu n\'écoutes plus avec ' + follow.name + '.');
+  });
   document.addEventListener('seeked', () => {
     if (follow.id != null && performance.now() > follow.ignoreUntil) stopFollow('Tu t\'es déplacé dans le titre : tu n\'écoutes plus avec ' + follow.name + '.');
   }, true);
@@ -2304,7 +2337,7 @@
     const t = playLive(f);
     Object.assign(follow, { id: f.user_id, name: f.name, missing: 0, lastSeen: performance.now() });
     paintLive(); scheduleFollow();
-    toast('Tu écoutes « ' + t.name + ' » avec ' + f.name + ', et tu suis ses changements de titre.', 9000, { label: 'Arrêter de suivre', run: () => stopFollow('Tu n\'écoutes plus avec ' + f.name + '.') });
+    toast('Tu ' + (t.isAudio ? 'écoutes' : 'regardes') + ' « ' + t.name + ' » avec ' + f.name + ', et tu suis ses changements de titre.', 9000, { label: 'Arrêter de suivre', run: () => stopFollow('Tu n\'écoutes plus avec ' + f.name + '.') });
   }
 
   let liveTimer = null;
@@ -2317,8 +2350,8 @@
     });
     const list = L.list.length ? h('ul', { class: 'live-list' }, L.list.map(f => h('li', null, h('button', { type: 'button', onclick: () => { clearInterval(liveTimer); listenAlong(f.user_id); closeSheet(); } },
       f.avatar ? h('img', { src: 'avatars/' + encodeURIComponent(f.avatar), alt: '' }) : null,
-      h('span', { class: 'live-who' }, h('b', null, f.name + ' écoute'), h('i', null, f.track.title)),
-      h('span', { class: 'live-go' }, follow.id === f.user_id ? '● Tu le suis' : '▶ Écouter avec ' + f.name)))))
+      h('span', { class: 'live-who' }, h('b', null, f.name + (Number(f.track.audio_only) === 1 ? ' écoute' : ' regarde')), h('i', null, f.track.title)),
+      h('span', { class: 'live-go' }, follow.id === f.user_id ? '● Tu le suis' : (Number(f.track.audio_only) === 1 ? '▶ Écouter avec ' : '▶ Regarder le clip avec ') + f.name)))))
       : h('p', { class: 'empty' }, 'Personne n\'écoute en ce moment, ou personne ne partage son écoute.');
     const banner = follow.id != null
       ? h('div', { class: 'cookie-box' }, h('p', null, 'Tu suis ' + follow.name + ' : ton écoute change avec la sienne.'),

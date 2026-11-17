@@ -6,6 +6,7 @@
  * (jamais téléchargeable) tant que le partage est actif.
  *
  * GET  : { sharing, live: [{ user_id, name, avatar, is_playing, position, age, track }] }
+ *        (titres ET clips : track.audio_only vaut 0 pour un clip)
  *        position + age = où en est l'auditeur À L'INSTANT de la réponse.
  *        ?following=ID : signale que j'écoute avec ce compte ; « listeners » = ceux qui écoutent avec moi.
  * POST : { enabled: bool } — active ou coupe MON partage ; { leave: true } — j'arrête d'écouter avec quelqu'un.
@@ -60,7 +61,7 @@ $stmt = $db->prepare(
      JOIN download_history dh ON dh.id = ps.history_id
      WHERE u.share_listening = 1 AND u.status = 'active' AND u.id <> :me
        AND ps.is_playing = 1 AND ps.updated_ts > :since
-       AND dh.library_path IS NOT NULL AND dh.library_path <> '' AND dh.audio_only = 1
+       AND dh.library_path IS NOT NULL AND dh.library_path <> ''
      ORDER BY ps.updated_ts DESC"
 );
 $stmt->execute([':me' => $me, ':since' => $now - 90]);
