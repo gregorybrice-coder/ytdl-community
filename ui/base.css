@@ -465,6 +465,9 @@ a { color: var(--accent-text); }
 }
 .live-btn { position: relative; }
 .live-btn.is-on { color: var(--accent-text); }
+.live-btn.has-listeners::after { content: ''; position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.live-listeners { color: var(--accent-text); font-size: 13px; margin: 8px 0 0; }
+.live-btn.is-following svg { animation: pending 1.6s ease-in-out infinite alternate; color: var(--accent-text); }
 .live-badge {
   position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   background: var(--accent); color: var(--on-accent); font: 700 10px/16px var(--font-body); text-align: center;

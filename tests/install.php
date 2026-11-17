@@ -43,6 +43,7 @@ try {
  check(ytdl_genre_parse('Artiste - Titre (Official Video)','')[0]==='Artiste'&&ytdl_genre_parse('Sans séparateur','Chaîne - Topic')[0]==='Chaîne'&&ytdl_genre_parse('A & B - Titre','')[0]==='A'&&ytdl_genre_same_name('The Beatles','Beatles'),'Artiste extrait du titre, noms d’artistes comparés');
  [$status]=runPhp([$root.'/genre-worker.php']);check($status===0,'Classement des genres : aucun titre à traiter, sortie sans erreur');
  check($db->query('SELECT share_listening FROM users LIMIT 1')!==false&&$db->query('SELECT updated_ts FROM playback_state LIMIT 1')!==false,'Colonnes du partage de l’écoute présentes sur base neuve');
+ check($db->query('SELECT listener_id, host_id, updated_ts FROM listen_along LIMIT 1')!==false,'Table des auditeurs de l’écoute partagée présente sur base neuve');
  require_once $root.'/library-access-lib.php';
  check(ytdl_track_is_live_shared(1)===false,'Aucun titre n’est partagé par défaut');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');

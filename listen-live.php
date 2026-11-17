@@ -7,7 +7,8 @@
  *
  * GET  : { sharing, live: [{ user_id, name, avatar, is_playing, position, age, track }] }
  *        position + age = où en est l'auditeur À L'INSTANT de la réponse.
- * POST : { enabled: bool } — active ou coupe MON partage.
+ *        ?following=ID : signale que j'écoute avec ce compte ; « listeners » = ceux qui écoutent avec moi.
+ * POST : { enabled: bool } — active ou coupe MON partage ; { leave: true } — j'arrête d'écouter avec quelqu'un.
  */
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/auth.php';
@@ -20,9 +21,31 @@ $me = (int)$user['id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $p = json_decode(file_get_contents('php://input'), true) ?: [];
-    $db->prepare('UPDATE users SET share_listening = :v WHERE id = :id')->execute([':v' => !empty($p['enabled']) ? 1 : 0, ':id' => $me]);
-    echo json_encode(['ok' => true, 'sharing' => !empty($p['enabled'])]);
+    // J'arrête d'écouter avec quelqu'un.
+    if (!empty($p['leave'])) {
+        $db->prepare('DELETE FROM listen_along WHERE listener_id = :me')->execute([':me' => $me]);
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+    $on = !empty($p['enabled']) ? 1 : 0;
+    $db->prepare('UPDATE users SET share_listening = :v WHERE id = :id')->execute([':v' => $on, ':id' => $me]);
+    // Partage coupé : plus personne n'écoute avec moi.
+    if (!$on) $db->prepare('DELETE FROM listen_along WHERE host_id = :me')->execute([':me' => $me]);
+    echo json_encode(['ok' => true, 'sharing' => (bool)$on]);
     exit;
+}
+
+// ?following=ID : j'écoute avec ce compte (appelé toutes les 3 s tant que je le suis) ;
+// il en est prévenu discrètement (voir « listeners » plus bas).
+$following = (int)($_GET['following'] ?? 0);
+if ($following > 0 && $following !== $me) {
+    $chk = $db->prepare("SELECT 1 FROM users WHERE id = :id AND share_listening = 1 AND status = 'active'");
+    $chk->execute([':id' => $following]);
+    if ($chk->fetchColumn() !== false) {
+        $db->prepare('INSERT INTO listen_along (listener_id, host_id, updated_ts) VALUES (:me, :h, :ts)
+                      ON CONFLICT(listener_id) DO UPDATE SET host_id = :h2, updated_ts = :ts2')
+           ->execute([':me' => $me, ':h' => $following, ':ts' => microtime(true), ':h2' => $following, ':ts2' => microtime(true)]);
+    }
 }
 
 $now = microtime(true);
@@ -64,4 +87,13 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
 }
 
 $sharing = (int)$db->query('SELECT share_listening FROM users WHERE id = ' . $me)->fetchColumn() === 1;
-echo json_encode(['sharing' => $sharing, 'live' => $live]);
+
+// Ceux qui écoutent avec moi en ce moment (renouvelés depuis moins de 15 s).
+$listeners = [];
+if ($sharing) {
+    $ls = $db->prepare('SELECT u.id AS user_id, u.name, u.avatar FROM listen_along la JOIN users u ON u.id = la.listener_id
+                        WHERE la.host_id = :me AND la.updated_ts > :since ORDER BY u.name');
+    $ls->execute([':me' => $me, ':since' => $now - 15]);
+    $listeners = array_map(fn($r) => ['user_id' => (int)$r['user_id'], 'name' => $r['name'], 'avatar' => $r['avatar']], $ls->fetchAll(PDO::FETCH_ASSOC));
+}
+echo json_encode(['sharing' => $sharing, 'live' => $live, 'listeners' => $listeners]);

@@ -459,6 +459,15 @@ function ytdl_db(): PDO {
     // sombre, clair, ambre et kawaii retirées le 2026-11-15) : gardée côté serveur pour suivre le compte d'un appareil à
     // l'autre. NULL = jamais choisie ici, chaque appareil garde alors son
     // propre réglage local (comportement d'avant).
+    // Qui écoute avec qui en ce moment (listen-live.php) : une ligne par auditeur,
+    // renouvelée toutes les 3 s tant qu'il suit son hôte ; sert à prévenir l'hôte.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS listen_along (
+            listener_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            updated_ts REAL NOT NULL
+        )
+    ");
     // « Partager ce que j'écoute » (listen-live.php) : désactivé par défaut,
     // chacun l'active pour lui-même.
     if (!in_array('share_listening', $userCols, true)) {

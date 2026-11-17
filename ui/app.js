@@ -1037,7 +1037,8 @@
   const sheet = $('sheet');
   function openSheet(title, ...content) {
     $('sheet-title').textContent = title;
-    $('sheet-body').replaceChildren(...content);
+    // Les éléments absents (null, false) sont ignorés : replaceChildren les écrirait « null ».
+    $('sheet-body').replaceChildren(...content.flat().filter(c => c !== null && c !== undefined && c !== false));
     $('sheet-body').scrollTop = 0; // une nouvelle feuille s'ouvre toujours en haut
     if (!sheet.open) sheet.showModal();
     return $('sheet-body');
@@ -2225,27 +2226,85 @@
     const n = Y.live.list.length;
     liveBadge.hidden = n === 0; liveBadge.textContent = String(n);
     liveBtn.classList.toggle('is-on', Y.live.sharing);
+    liveBtn.classList.toggle('is-following', follow.id != null);
+    liveBtn.classList.toggle('has-listeners', Y.live.listeners.length > 0);
     liveBtn.setAttribute('aria-label', n ? 'Écouter avec les autres (' + n + ' en direct)' : 'Écoute partagée');
   }
   Y.live.on('change', paintLive);
+  // Quelqu'un se met à écouter avec moi : un petit message, sans bouton ni son.
+  Y.live.on('joined', (list) => toast(list.map(l => l.name).join(', ') + (list.length > 1 ? ' écoutent' : ' écoute') + ' avec toi.', 4000));
 
-  // Rejoint l'écoute de quelqu'un : même titre, même seconde. Les données sont
-  // redemandées au moment du toucher (position exacte), et la position de départ
-  // est calculée quand le fichier est prêt : le temps de chargement est rattrapé.
-  async function listenAlong(userId) {
-    await Y.live.refresh();
-    const f = Y.live.list.find(x => x.user_id === userId);
-    if (!f) { toast('Cette personne n\'écoute plus rien en ce moment.'); return; }
+  // Rejoint l'écoute de quelqu'un : même titre, même seconde, puis la SUIT : quand
+  // il change de titre, on change avec lui ; si on s'écarte de sa position
+  // (il avance, recule, reprend après une pause), on se recale. Les données sont
+  // redemandées au toucher (position exacte), et la position de départ est calculée
+  // quand le fichier est prêt : le temps de chargement est rattrapé.
+  const follow = { id: null, name: '', trackId: null, missing: 0, lastSeen: 0, ignoreUntil: 0, timer: null };
+  const ignoreMoves = (ms) => { follow.ignoreUntil = performance.now() + (ms || 3000); }; // nos propres gestes ne sont pas ceux de l'utilisateur
+
+  function playLive(f) {
     const t = Y.live.track(f.track);
+    follow.trackId = f.track.id;
+    ignoreMoves();
     player.setQueue([t], 0, { startAt: () => Y.live.positionOf(f) });
-    toast('Tu écoutes « ' + t.name + ' » avec ' + f.name + '.', 9000, { label: 'Resynchroniser', run: () => resyncLive(userId) });
+    return t;
   }
-  async function resyncLive(userId) {
-    await Y.live.refresh();
+  function stopFollow(message) {
+    if (follow.id == null) return;
+    follow.id = null; clearTimeout(follow.timer);
+    Y.live.leave();
+    paintLive();
+    if (message) toast(message);
+  }
+  function scheduleFollow() {
+    clearTimeout(follow.timer);
+    if (follow.id != null) follow.timer = setTimeout(followTick, 3000);
+  }
+  async function followTick() {
+    if (follow.id == null) return;
+    await Y.live.refresh(follow.id);
+    if (follow.id == null) return;
+    const f = Y.live.list.find(x => x.user_id === follow.id);
+    if (!f) {
+      // Plus de lecture en cours chez lui : pause, ou arrêt du partage. On attend son retour.
+      follow.missing++;
+      if (follow.missing === 2 && player.playing) { ignoreMoves(); player.pause(); toast(follow.name + ' ne lit plus rien : en attente de son retour.', 5000, { label: 'Arrêter de suivre', run: () => stopFollow() }); }
+      if (performance.now() - follow.lastSeen > 5 * 60 * 1000) { stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.'); return; }
+    } else {
+      follow.lastSeen = performance.now();
+      const returned = follow.missing >= 2;
+      follow.missing = 0;
+      if (!player.track || player.track.id !== f.track.id) {
+        const t = playLive(f);
+        toast(follow.name + ' est passé à « ' + t.name + ' ».', 3500);
+      } else {
+        const target = Y.live.positionOf(f);
+        if (returned || !player.playing) { ignoreMoves(); player.seek(target); player.play(); }
+        else if (Math.abs(player.currentTime - target) > 2.5) { ignoreMoves(); player.seek(target); }
+      }
+    }
+    scheduleFollow();
+  }
+  // Un geste de l'utilisateur (autre titre, pause, déplacement dans le morceau) = il quitte l'écoute partagée.
+  player.on('track', (t) => { if (follow.id != null && t.id !== follow.trackId && performance.now() > follow.ignoreUntil) stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.'); });
+  player.on('state', () => {
+    if (follow.id == null || performance.now() < follow.ignoreUntil || player.playing) return;
+    // Fin naturelle du titre : on cherche tout de suite le suivant, sans quitter l'écoute.
+    if (player.duration && player.currentTime >= player.duration - 1.5) { clearTimeout(follow.timer); follow.timer = setTimeout(followTick, 600); return; }
+    stopFollow('Tu as mis en pause : tu n\'écoutes plus avec ' + follow.name + '.');
+  });
+  document.addEventListener('seeked', () => {
+    if (follow.id != null && performance.now() > follow.ignoreUntil) stopFollow('Tu t\'es déplacé dans le titre : tu n\'écoutes plus avec ' + follow.name + '.');
+  }, true);
+
+  async function listenAlong(userId) {
+    await Y.live.refresh(userId);
     const f = Y.live.list.find(x => x.user_id === userId);
     if (!f) { toast('Cette personne n\'écoute plus rien en ce moment.'); return; }
-    if (player.track && player.track.id === f.track.id) { player.seek(Y.live.positionOf(f)); if (!player.playing) player.play(); toast('Recalé sur ' + f.name + '.'); }
-    else listenAlong(userId);
+    const t = playLive(f);
+    Object.assign(follow, { id: f.user_id, name: f.name, missing: 0, lastSeen: performance.now() });
+    paintLive(); scheduleFollow();
+    toast('Tu écoutes « ' + t.name + ' » avec ' + f.name + ', et tu suis ses changements de titre.', 9000, { label: 'Arrêter de suivre', run: () => stopFollow('Tu n\'écoutes plus avec ' + f.name + '.') });
   }
 
   let liveTimer = null;
@@ -2259,11 +2318,16 @@
     const list = L.list.length ? h('ul', { class: 'live-list' }, L.list.map(f => h('li', null, h('button', { type: 'button', onclick: () => { clearInterval(liveTimer); listenAlong(f.user_id); closeSheet(); } },
       f.avatar ? h('img', { src: 'avatars/' + encodeURIComponent(f.avatar), alt: '' }) : null,
       h('span', { class: 'live-who' }, h('b', null, f.name + ' écoute'), h('i', null, f.track.title)),
-      h('span', { class: 'live-go' }, '▶ Écouter avec ' + f.name)))))
+      h('span', { class: 'live-go' }, follow.id === f.user_id ? '● Tu le suis' : '▶ Écouter avec ' + f.name)))))
       : h('p', { class: 'empty' }, 'Personne n\'écoute en ce moment, ou personne ne partage son écoute.');
-    openSheet('Écoute partagée',
+    const banner = follow.id != null
+      ? h('div', { class: 'cookie-box' }, h('p', null, 'Tu suis ' + follow.name + ' : ton écoute change avec la sienne.'),
+          h('button', { type: 'button', class: 'btn primary', onclick: () => { stopFollow('Tu n\'écoutes plus avec ' + follow.name + '.'); renderLive(); } }, 'Arrêter de suivre'))
+      : null;
+    openSheet('Écoute partagée', banner,
       h('p', null, 'Active le partage pour que les autres voient ce que tu écoutes et puissent l\'écouter avec toi, à la même seconde. Seul le titre en cours est concerné.'),
       h('label', { class: 'switch' }, h('span', null, 'Partager ce que j\'écoute'), sw),
+      L.sharing && L.listeners.length ? h('p', { class: 'live-listeners' }, '● ' + L.listeners.map(l => l.name).join(', ') + (L.listeners.length > 1 ? ' écoutent' : ' écoute') + ' avec toi en ce moment.') : null,
       h('h3', null, 'En ce moment'), list);
   }
   async function openLive() {
@@ -2306,7 +2370,14 @@
     renderQueue();
     library.startPolling();
     Y.live.refresh();
-    setInterval(() => { if (!document.hidden) Y.live.refresh(); }, 20000); // qui écoute quoi (pastille du casque)
+    // Qui écoute quoi (pastille du casque) : toutes les 20 s, toutes les 5 s pendant MON
+    // partage (pour être prévenu tout de suite quand quelqu'un écoute avec moi).
+    let liveLast = 0;
+    setInterval(() => {
+      if (document.hidden || follow.id != null) return; // en suivi, followTick s'en charge
+      if (performance.now() - liveLast < (Y.live.sharing ? 4500 : 19500)) return;
+      liveLast = performance.now(); Y.live.refresh();
+    }, 1000);
     pollImport(); // import en cours (ou fini pendant que l'appli était fermée)
 
     // Demandes d'accès à ma bibliothèque (et réponses aux miennes) : relevées

@@ -336,17 +336,26 @@
   const live = Object.assign(emitter(), {
     sharing: false,   // MON partage
     list: [],         // ceux qui écoutent et partagent, hors moi
-    async refresh() {
+    listeners: [],    // ceux qui écoutent avec moi (quand je partage)
+    // following : identifiant du compte que je suis (signalé à lui, voir listen-live.php).
+    async refresh(following) {
       let data;
-      try { data = await api.get('listen-live.php'); } catch (err) { return null; }
+      try { data = await api.get('listen-live.php' + (following ? '?following=' + encodeURIComponent(following) : '')); } catch (err) { return null; }
       this.sharing = !!data.sharing; shareListening = this.sharing;
       this.list = (data.live || []).map(x => Object.assign({}, x, { receivedAt: performance.now() }));
+      const before = new Set(this.listeners.map(l => l.user_id));
+      this.listeners = data.listeners || [];
+      const joined = this.listeners.filter(l => !before.has(l.user_id));
       this.emit('change');
+      if (joined.length) this.emit('joined', joined);
       return data;
     },
+    // J'arrête d'écouter avec quelqu'un.
+    leave() { return api.json('listen-live.php', { leave: true }).catch(() => {}); },
     async setSharing(on) {
       await api.json('listen-live.php', { enabled: !!on });
       this.sharing = !!on; shareListening = this.sharing;
+      if (!on) this.listeners = [];
       if (on) saveState(true); // l'écoute en cours est tout de suite visible
       this.emit('change');
     },
