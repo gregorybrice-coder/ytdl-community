@@ -329,6 +329,33 @@
     },
   });
 
+  // -------------------------------------------------- écoute partagée en direct
+
+  // « Partager ce que j'écoute » (listen-live.php) : ce que les autres comptes
+  // écoutent en ce moment, et le titre à jouer pour les rejoindre à la même seconde.
+  const live = Object.assign(emitter(), {
+    sharing: false,   // MON partage
+    list: [],         // ceux qui écoutent et partagent, hors moi
+    async refresh() {
+      let data;
+      try { data = await api.get('listen-live.php'); } catch (err) { return null; }
+      this.sharing = !!data.sharing; shareListening = this.sharing;
+      this.list = (data.live || []).map(x => Object.assign({}, x, { receivedAt: performance.now() }));
+      this.emit('change');
+      return data;
+    },
+    async setSharing(on) {
+      await api.json('listen-live.php', { enabled: !!on });
+      this.sharing = !!on; shareListening = this.sharing;
+      if (on) saveState(true); // l'écoute en cours est tout de suite visible
+      this.emit('change');
+    },
+    // Titre prêt à jouer (mêmes champs que ceux de la bibliothèque).
+    track(t) { return decorate(Object.assign({ category: 'music' }, t, { _live: true })); },
+    // Position actuelle de l'auditeur, d'après sa position à la réception et le temps écoulé depuis.
+    positionOf(entry) { return entry.position + (performance.now() - entry.receivedAt) / 1000; },
+  });
+
   // ----------------------------------------------------------------- compte
 
   const account = {
@@ -512,7 +539,7 @@
       updateMediaSession(track);
       // Position de départ connue (reprise) : c'est elle qu'on enregistre, pas
       // le 0 d'un fichier dont les métadonnées ne sont pas encore chargées.
-      resumeAt = (opts && opts.startAt) || 0;
+      resumeAt = typeof (opts && opts.startAt) === 'number' ? opts.startAt : 0;
       saveState(true, resumeAt);
       cache.plan(track, cached);
     },
@@ -623,8 +650,14 @@
     cache.releaseFor(el);
     if (url.startsWith('blob:')) cache.owned.set(el, url);
     el.src = url;
-    if (startAt > 0) {
-      const once = () => { el.removeEventListener('loadedmetadata', once); try { el.currentTime = startAt; } catch (err) {} };
+    if (startAt) {
+      // startAt peut être une fonction : la position est alors calculée au moment
+      // où le fichier est prêt (écoute partagée : le temps de chargement est rattrapé).
+      const once = () => {
+        el.removeEventListener('loadedmetadata', once);
+        const t = typeof startAt === 'function' ? startAt() : startAt;
+        if (t > 0) { try { el.currentTime = t; } catch (err) {} }
+      };
       el.addEventListener('loadedmetadata', once);
     }
   }
@@ -761,6 +794,9 @@
   // que capture.php, pour reprendre là où on s'était arrêté, sur n'importe
   // quel appareil et dans n'importe quelle interface.
   let lastSave = 0;
+  // Partage de l'écoute actif : la position est enregistrée toutes les 4 s (au lieu de 10)
+  // et à chaque déplacement, pour que les autres se calent à la même seconde.
+  let shareListening = false;
   // Position de reprise pas encore appliquée (métadonnées pas chargées, ou
   // page quittée sans avoir rien écouté) : c'est elle qu'on réenregistre,
   // jamais le 0 provisoire du lecteur.
@@ -771,7 +807,7 @@
     if (!(position > 0) && resumeAt > 0 && !player.playing && player.currentTime < 1) position = resumeAt;
     if (!track) return;
     const now = Date.now();
-    if (!force && now - lastSave < 10000) return;
+    if (!force && now - lastSave < (shareListening ? 4000 : 10000)) return;
     lastSave = now;
     const body = JSON.stringify({
       history_id: track.id, position_seconds: Math.max(0, position > 0 ? position : player.currentTime),
@@ -780,6 +816,7 @@
     try { localStorage.setItem('ytdl_last_media_' + (BOOT.id || 0), body); } catch (err) {}
     fetch('playback-state.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
   }
+  elements.forEach(el => el.addEventListener('seeked', () => { if (shareListening) saveState(true); }));
   window.addEventListener('pagehide', () => saveState(true));
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveState(true); });
 
@@ -882,6 +919,6 @@
   window.Ytdl = {
     boot: BOOT, api, ApiError, prefs, deviceId, splitArtistTitle, fmtTime, clamp, emitter,
     normalize: applyGain,
-    library, access, account, sortTracks, filterTracks, player, lyrics, artistInfo, lastPlayback, download, youtubeSearch, resolvePlaylist,
+    library, access, live, account, sortTracks, filterTracks, player, lyrics, artistInfo, lastPlayback, download, youtubeSearch, resolvePlaylist,
   };
 })();

@@ -42,6 +42,9 @@ try {
  $db->exec("DELETE FROM artist_genres");
  check(ytdl_genre_parse('Artiste - Titre (Official Video)','')[0]==='Artiste'&&ytdl_genre_parse('Sans séparateur','Chaîne - Topic')[0]==='Chaîne'&&ytdl_genre_parse('A & B - Titre','')[0]==='A'&&ytdl_genre_same_name('The Beatles','Beatles'),'Artiste extrait du titre, noms d’artistes comparés');
  [$status]=runPhp([$root.'/genre-worker.php']);check($status===0,'Classement des genres : aucun titre à traiter, sortie sans erreur');
+ check($db->query('SELECT share_listening FROM users LIMIT 1')!==false&&$db->query('SELECT updated_ts FROM playback_state LIMIT 1')!==false,'Colonnes du partage de l’écoute présentes sur base neuve');
+ require_once $root.'/library-access-lib.php';
+ check(ytdl_track_is_live_shared(1)===false,'Aucun titre n’est partagé par défaut');
  check(ytdl_library_volume_mounted(),'Marqueur reconnu');check(ytdl_base_url()==='http://localhost:8080/ytdl','URL publique configurable');check(ytdl_jobs_root()===YTDL_DATA_DIR.'/jobs','Tâches dans le stockage privé');
  file_put_contents(YTDL_DATA_DIR.'/smtp-config.php','<?php return '.var_export(['host'=>'smtp.example.org','port'=>587,'username'=>'example','password'=>'test-only','from'=>'no-reply@example.org'],true).';');
  check(ytdl_smtp_config()['from']==='no-reply@example.org','SMTP privé reconnu sans envoi');

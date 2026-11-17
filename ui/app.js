@@ -2215,6 +2215,71 @@
     if (!wheel.drag && !wheel.raf) refreshWheel(true);
   });
 
+  // ------------------------------------------------------ écoute partagée
+
+  // « Partager ce que j'écoute » : chacun peut activer son partage ; les autres
+  // voient alors ce qu'il écoute (pastille sur le casque) et, en touchant le
+  // titre, l'écoutent avec lui, calés à la même seconde.
+  const liveBtn = $('live-btn'), liveBadge = $('live-badge');
+  function paintLive() {
+    const n = Y.live.list.length;
+    liveBadge.hidden = n === 0; liveBadge.textContent = String(n);
+    liveBtn.classList.toggle('is-on', Y.live.sharing);
+    liveBtn.setAttribute('aria-label', n ? 'Écouter avec les autres (' + n + ' en direct)' : 'Écoute partagée');
+  }
+  Y.live.on('change', paintLive);
+
+  // Rejoint l'écoute de quelqu'un : même titre, même seconde. Les données sont
+  // redemandées au moment du toucher (position exacte), et la position de départ
+  // est calculée quand le fichier est prêt : le temps de chargement est rattrapé.
+  async function listenAlong(userId) {
+    await Y.live.refresh();
+    const f = Y.live.list.find(x => x.user_id === userId);
+    if (!f) { toast('Cette personne n\'écoute plus rien en ce moment.'); return; }
+    const t = Y.live.track(f.track);
+    player.setQueue([t], 0, { startAt: () => Y.live.positionOf(f) });
+    toast('Tu écoutes « ' + t.name + ' » avec ' + f.name + '.', 9000, { label: 'Resynchroniser', run: () => resyncLive(userId) });
+  }
+  async function resyncLive(userId) {
+    await Y.live.refresh();
+    const f = Y.live.list.find(x => x.user_id === userId);
+    if (!f) { toast('Cette personne n\'écoute plus rien en ce moment.'); return; }
+    if (player.track && player.track.id === f.track.id) { player.seek(Y.live.positionOf(f)); if (!player.playing) player.play(); toast('Recalé sur ' + f.name + '.'); }
+    else listenAlong(userId);
+  }
+
+  let liveTimer = null;
+  function renderLive() {
+    const L = Y.live;
+    const sw = h('input', { type: 'checkbox' }); sw.checked = L.sharing;
+    sw.addEventListener('change', async () => {
+      try { await L.setSharing(sw.checked); toast(sw.checked ? 'Les autres voient maintenant ce que tu écoutes.' : 'Ton écoute n\'est plus partagée.'); }
+      catch (err) { sw.checked = !sw.checked; toast(err.message); }
+    });
+    const list = L.list.length ? h('ul', { class: 'live-list' }, L.list.map(f => h('li', null, h('button', { type: 'button', onclick: () => { clearInterval(liveTimer); listenAlong(f.user_id); closeSheet(); } },
+      f.avatar ? h('img', { src: 'avatars/' + encodeURIComponent(f.avatar), alt: '' }) : null,
+      h('span', { class: 'live-who' }, h('b', null, f.name + ' écoute'), h('i', null, f.track.title)),
+      h('span', { class: 'live-go' }, '▶ Écouter avec ' + f.name)))))
+      : h('p', { class: 'empty' }, 'Personne n\'écoute en ce moment, ou personne ne partage son écoute.');
+    openSheet('Écoute partagée',
+      h('p', null, 'Active le partage pour que les autres voient ce que tu écoutes et puissent l\'écouter avec toi, à la même seconde. Seul le titre en cours est concerné.'),
+      h('label', { class: 'switch' }, h('span', null, 'Partager ce que j\'écoute'), sw),
+      h('h3', null, 'En ce moment'), list);
+  }
+  async function openLive() {
+    await Y.live.refresh();
+    renderLive();
+    // Tant que la feuille est ouverte, la liste suit ce que les autres écoutent.
+    clearInterval(liveTimer);
+    liveTimer = setInterval(async () => {
+      if (!sheet.open || $('sheet-title').textContent !== 'Écoute partagée') { clearInterval(liveTimer); return; }
+      const before = JSON.stringify(Y.live.list.map(f => [f.user_id, f.track.id]));
+      await Y.live.refresh();
+      if (JSON.stringify(Y.live.list.map(f => [f.user_id, f.track.id])) !== before) renderLive();
+    }, 6000);
+  }
+  liveBtn.addEventListener('click', openLive);
+
   // -------------------------------------------------------------- démarrage
 
   // Recherche apportée depuis une autre apparence (voir openSkinGallery) :
@@ -2240,6 +2305,8 @@
     paintOptions();
     renderQueue();
     library.startPolling();
+    Y.live.refresh();
+    setInterval(() => { if (!document.hidden) Y.live.refresh(); }, 20000); // qui écoute quoi (pastille du casque)
     pollImport(); // import en cours (ou fini pendant que l'appli était fermée)
 
     // Demandes d'accès à ma bibliothèque (et réponses aux miennes) : relevées

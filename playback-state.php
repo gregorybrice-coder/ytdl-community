@@ -50,17 +50,18 @@ if (!$hasAccess) {
     $hasAccess = $accessStmt->fetchColumn() !== false;
 }
 if (!$hasAccess) $hasAccess = ytdl_viewer_has_library_access($user['id'], (int)$ownerId);
+if (!$hasAccess) $hasAccess = ytdl_track_is_live_shared($historyId); // écoute partagée en cours
 if (!$hasAccess) {
     ytdl_json_error("Tu n'as pas accès à ce fichier.", 403);
 }
 
 ytdl_db()->prepare(
-    'INSERT INTO playback_state (user_id, history_id, position_seconds, device_id, is_playing, playlist_id, updated_at)
-     VALUES (:uid, :hid, :pos, :dev, :playing, :plid, datetime(\'now\'))
-     ON CONFLICT(user_id) DO UPDATE SET history_id = :hid2, position_seconds = :pos2, device_id = :dev2, is_playing = :playing2, playlist_id = :plid2, updated_at = datetime(\'now\')'
+    'INSERT INTO playback_state (user_id, history_id, position_seconds, device_id, is_playing, playlist_id, updated_at, updated_ts)
+     VALUES (:uid, :hid, :pos, :dev, :playing, :plid, datetime(\'now\'), :ts)
+     ON CONFLICT(user_id) DO UPDATE SET history_id = :hid2, position_seconds = :pos2, device_id = :dev2, is_playing = :playing2, playlist_id = :plid2, updated_at = datetime(\'now\'), updated_ts = :ts2'
 )->execute([
-    ':uid' => $user['id'], ':hid' => $historyId, ':pos' => $position, ':dev' => $deviceId, ':playing' => $isPlaying, ':plid' => $playlistId,
-    ':hid2' => $historyId, ':pos2' => $position, ':dev2' => $deviceId, ':playing2' => $isPlaying, ':plid2' => $playlistId,
+    ':uid' => $user['id'], ':hid' => $historyId, ':pos' => $position, ':dev' => $deviceId, ':playing' => $isPlaying, ':plid' => $playlistId, ':ts' => microtime(true),
+    ':hid2' => $historyId, ':pos2' => $position, ':dev2' => $deviceId, ':playing2' => $isPlaying, ':plid2' => $playlistId, ':ts2' => microtime(true),
 ]);
 
 echo json_encode(['ok' => true]);

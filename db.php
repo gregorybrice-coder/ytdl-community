@@ -353,6 +353,11 @@ function ytdl_db(): PDO {
     if (!in_array('is_playing', $playbackStateCols, true)) {
         $pdo->exec('ALTER TABLE playback_state ADD COLUMN is_playing INTEGER NOT NULL DEFAULT 0');
     }
+    // Heure exacte (microtime) de l'enregistrement de la position : sert à caler
+    // l'écoute partagée « à la même seconde » (updated_at n'a que la seconde).
+    if (!in_array('updated_ts', $playbackStateCols, true)) {
+        $pdo->exec('ALTER TABLE playback_state ADD COLUMN updated_ts REAL');
+    }
 
     // Code à 6 chiffres envoyé avec le lien de connexion : sur iPhone, l'appli
     // ajoutée à l'écran d'accueil a ses propres cookies, et le lien de l'email
@@ -454,6 +459,11 @@ function ytdl_db(): PDO {
     // sombre, clair, ambre et kawaii retirées le 2026-11-15) : gardée côté serveur pour suivre le compte d'un appareil à
     // l'autre. NULL = jamais choisie ici, chaque appareil garde alors son
     // propre réglage local (comportement d'avant).
+    // « Partager ce que j'écoute » (listen-live.php) : désactivé par défaut,
+    // chacun l'active pour lui-même.
+    if (!in_array('share_listening', $userCols, true)) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN share_listening INTEGER NOT NULL DEFAULT 0');
+    }
     if (!in_array('skin', $userCols, true)) {
         $pdo->exec('ALTER TABLE users ADD COLUMN skin TEXT');
     }

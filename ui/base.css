@@ -463,6 +463,20 @@ a { color: var(--accent-text); }
   position: absolute; top: -4px; left: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
   background: var(--danger); color: #fff; font: 600 10px/18px var(--font-body); text-align: center;
 }
+.live-btn { position: relative; }
+.live-btn.is-on { color: var(--accent-text); }
+.live-badge {
+  position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--accent); color: var(--on-accent); font: 700 10px/16px var(--font-body); text-align: center;
+  animation: pending 1.6s ease-in-out infinite alternate;
+}
+.live-list { list-style: none; margin: 0; padding: 0; }
+.live-list li button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 12px 0; color: inherit; font: inherit; cursor: pointer; }
+.live-list img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+.live-list .live-who { display: flex; flex-direction: column; min-width: 0; }
+.live-list .live-who b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-list .live-who i { font-style: normal; font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-list .live-go { margin-left: auto; flex: none; font-size: 12px; color: var(--accent-text); }
 .avatar-btn.is-pending .avatar-ring { box-shadow: 0 0 0 2px rgba(var(--accent-rgb), .4), 0 0 18px rgba(var(--accent-rgb), .8); animation: pending 1.6s ease-in-out infinite alternate; }
 @keyframes pending { to { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .15), 0 0 30px rgba(var(--accent-rgb), .95); } }
 .deck-empty p { margin: 0 0 12px; }

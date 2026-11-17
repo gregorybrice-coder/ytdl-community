@@ -78,3 +78,21 @@ function ytdl_notify_library_access_granted(array $viewer, string $ownerName): v
         . ytdl_base_url() . "/\n"
     );
 }
+
+
+/** Durée pendant laquelle le titre qu'un compte partage reste lisible par les autres (secondes). */
+const YTDL_LIVE_WINDOW = 1800;
+
+/**
+ * Ce titre est-il celui qu'un compte écoute et PARTAGE en ce moment ?
+ * Seul ce titre devient lisible (jamais téléchargeable) pour les autres comptes,
+ * pour qu'ils l'écoutent en même temps (listen-live.php).
+ */
+function ytdl_track_is_live_shared(int $historyId): bool {
+    $stmt = ytdl_db()->prepare(
+        "SELECT 1 FROM playback_state ps JOIN users u ON u.id = ps.user_id
+         WHERE ps.history_id = :id AND u.share_listening = 1 AND u.status = 'active' AND ps.updated_ts > :since LIMIT 1"
+    );
+    $stmt->execute([':id' => $historyId, ':since' => microtime(true) - YTDL_LIVE_WINDOW]);
+    return $stmt->fetchColumn() !== false;
+}

@@ -131,6 +131,8 @@ function icon(string $name): string {
         'music' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
         'clip' => '<rect x="2" y="5" width="15" height="14" rx="2"/><path d="m17 10 5-3v10l-5-3"/>',
         'lists' => '<path d="M3 6h13M3 12h13M3 18h8"/><path d="m15 15 6 3-6 3z"/>',
+        // Écoute partagée : un casque.
+        'headphones' => '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="3" y="14" width="4" height="7" rx="1.5"/><rect x="17" y="14" width="4" height="7" rx="1.5"/>',
         // Genres musicaux : une étiquette.
         'genre' => '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
         // Hors musique (podcasts, documentaires, tutoriels) : un micro, la parole plutôt que le son.
@@ -210,6 +212,7 @@ if ($skinVars): ?>
     </label>
     <button type="button" class="ib search-toggle" id="search-toggle" aria-label="Rechercher" aria-expanded="false"><?php echo icon('search'); ?></button>
     <button type="button" class="ib" id="add-btn" aria-label="Ajouter un titre"><?php echo icon('plus'); ?></button>
+    <button type="button" class="ib live-btn" id="live-btn" aria-label="Écouter avec les autres" title="Écoute partagée"><?php echo icon('headphones'); ?><span class="live-badge" id="live-badge" hidden></span></button>
     <button type="button" class="avatar-btn" id="profile-btn" aria-label="Mon profil">
       <span class="avatar-ring" id="usage-ring"><?php if ($avatar): ?><img src="<?php echo htmlspecialchars($avatar); ?>" alt=""><?php else: ?><span><?php echo htmlspecialchars(mb_substr($boot['name'], 0, 1)); ?></span><?php endif; ?></span>
     </button>

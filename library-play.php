@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/library-access-lib.php';
 $user = ytdl_require_login(); // referme la session : un clip se lit pendant des minutes
 
 ini_set('memory_limit', '-1');
@@ -14,7 +15,9 @@ $asDownload = ($_GET['download'] ?? '0') === '1';
 // les id, y compris pour un fichier jamais partagé avec lui.
 // Accès par autorisation de bibliothèque (library_access) : écoute seulement,
 // jamais le téléchargement du fichier — pour l'avoir, il faut l'importer.
-$viewerClause = $asDownload ? '' : "OR EXISTS (SELECT 1 FROM library_access la WHERE la.owner_user_id = dh.user_id AND la.viewer_user_id = :user_id3 AND la.status = 'approved')";
+$viewerClause = $asDownload ? '' : "OR EXISTS (SELECT 1 FROM library_access la WHERE la.owner_user_id = dh.user_id AND la.viewer_user_id = :user_id3 AND la.status = 'approved')
+        OR EXISTS (SELECT 1 FROM playback_state ps JOIN users su ON su.id = ps.user_id
+                   WHERE ps.history_id = dh.id AND su.share_listening = 1 AND su.status = 'active' AND ps.updated_ts > :live_since)";
 $stmt = ytdl_db()->prepare(
     "SELECT library_path, title FROM download_history dh
      WHERE dh.id = :id AND (
@@ -24,7 +27,7 @@ $stmt = ytdl_db()->prepare(
      )"
 );
 $params = [':id' => $id, ':user_id' => $user['id'], ':user_id2' => $user['id']];
-if (!$asDownload) $params[':user_id3'] = $user['id'];
+if (!$asDownload) { $params[':user_id3'] = $user['id']; $params[':live_since'] = microtime(true) - YTDL_LIVE_WINDOW; }
 $stmt->execute($params);
 $row = $stmt->fetch();
 $stmt = null; // libère la base avant une diffusion qui peut durer des minutes
