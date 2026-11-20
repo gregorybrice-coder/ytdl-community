@@ -6596,10 +6596,17 @@ unset($_SESSION['shared_urls']);
   // "francoise hardy" sans cédille/accent ne trouvait jamais "Françoise
   // Hardy", ce qui est pourtant la façon la plus naturelle de taper,
   // surtout au clavier tactile.
+  // La ponctuation (apostrophes droites/typographiques, tirets « - » « — »,
+  // guillemets...) devient un simple espace, comme ytdl_search_key() côté
+  // serveur : "Don't" et "Don’t" sont le même mot, sans quoi une recherche
+  // tapée avec une apostrophe droite ne trouvait pas un titre YouTube stocké
+  // avec l'apostrophe typographique.
   function normalizeSearchText(str) {
     return Array.from((str || '').normalize('NFD'))
       .filter(ch => { const code = ch.codePointAt(0); return code < 0x0300 || code > 0x036f; })
-      .join('').toLowerCase();
+      .join('').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
   }
 
   // Filtre par classe (flou + fondu animés, voir .search-hidden) plutôt que

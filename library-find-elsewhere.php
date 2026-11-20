@@ -24,9 +24,15 @@ if (mb_strlen($query) > 200) {
     $query = mb_substr($query, 0, 200);
 }
 
-// Même filtre substring insensible à la casse que la recherche locale côté
-// client — un simple LIKE suffit à cette échelle (bibliothèque familiale).
-$like = '%' . str_replace(['%', '_'], ['\%', '\_'], $query) . '%';
+// Même filtre substring que la recherche locale côté client, sur une clé
+// normalisée (accents, casse, ponctuation) : un LIKE SQL ne reconnaît pas
+// "Don't" dans "Don’t". Filtré en PHP, à cette échelle (bibliothèque
+// familiale) c'est sans coût notable.
+$needle = ytdl_search_key($query);
+if ($needle === '') {
+    echo json_encode(['results' => []]);
+    exit;
+}
 
 $stmt = ytdl_db()->prepare(
     "SELECT dh.id, dh.title, dh.thumbnail, dh.uploader, u.name AS owner_name
@@ -35,19 +41,23 @@ $stmt = ytdl_db()->prepare(
      WHERE dh.user_id != :me
        AND dh.audio_only = :audio_only
        AND dh.library_path IS NOT NULL
-       AND dh.title LIKE :q ESCAPE '\\'
        AND NOT EXISTS (
            SELECT 1 FROM library_shares ls
            WHERE ls.history_id = dh.id AND ls.shared_with_user_id = :me2
        )
-     ORDER BY dh.downloaded_at DESC
-     LIMIT 6"
+     ORDER BY dh.downloaded_at DESC"
 );
 $stmt->execute([
     ':me' => $user['id'],
     ':me2' => $user['id'],
     ':audio_only' => $audioOnly,
-    ':q' => $like,
 ]);
 
-echo json_encode(['results' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+$results = [];
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    if (mb_strpos(ytdl_search_key((string)$row['title']), $needle) === false) continue;
+    $results[] = $row;
+    if (count($results) >= 6) break;
+}
+
+echo json_encode(['results' => $results]);

@@ -2017,6 +2017,24 @@ function ytdl_title_key(string $title): string {
 }
 
 /**
+ * Clé de recherche d'un texte saisi ou d'un titre : minuscules, sans accents,
+ * toute ponctuation ramenée à un espace. Équivalent serveur de
+ * normalizeSearchText() (capture.php), pour que la recherche dans les autres
+ * bibliothèques (library-find-elsewhere.php) trouve "Don't" comme "Don’t".
+ * Contrairement à ytdl_title_key(), ne retire aucune mention promotionnelle :
+ * une saisie partielle ("... hd") ne doit pas être tronquée.
+ */
+function ytdl_search_key(string $text): string {
+    $key = mb_strtolower(trim($text));
+    if (class_exists('Normalizer')) {
+        $key = Normalizer::normalize($key, Normalizer::FORM_D) ?: $key;
+        $key = preg_replace('/\p{Mn}+/u', '', $key);
+    }
+    $key = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $key);
+    return trim(preg_replace('/\s+/u', ' ', $key));
+}
+
+/**
  * Cherche, parmi les fichiers de ce compte réellement présents sur le serveur,
  * un morceau portant le même titre — dans le même mode (un MP3 déjà là ne doit
  * pas bloquer le téléchargement du clip, et inversement).
