@@ -14,7 +14,6 @@ $user = ytdl_require_login();
 header('Content-Type: application/json');
 
 $query = trim((string)($_GET['q'] ?? ''));
-$audioOnly = ($_GET['audio_only'] ?? '1') === '1' ? 1 : 0;
 
 if ($query === '') {
     echo json_encode(['results' => []]);
@@ -24,6 +23,9 @@ if (mb_strlen($query) > 200) {
     $query = mb_substr($query, 0, 200);
 }
 
+// Aucune distinction audio/clip : comme la recherche locale (voir
+// applyCrossTypeSearch dans capture.php), un morceau trouvé chez un autre
+// compte est proposé quel que soit l'onglet ouvert.
 // Même filtre substring que la recherche locale côté client, sur une clé
 // normalisée (accents, casse, ponctuation) : un LIKE SQL ne reconnaît pas
 // "Don't" dans "Don’t". Filtré en PHP, à cette échelle (bibliothèque
@@ -35,11 +37,10 @@ if ($needle === '') {
 }
 
 $stmt = ytdl_db()->prepare(
-    "SELECT dh.id, dh.title, dh.thumbnail, dh.uploader, u.name AS owner_name
+    "SELECT dh.id, dh.title, dh.thumbnail, dh.uploader, dh.audio_only, u.name AS owner_name
      FROM download_history dh
      JOIN users u ON u.id = dh.user_id
      WHERE dh.user_id != :me
-       AND dh.audio_only = :audio_only
        AND dh.library_path IS NOT NULL
        AND NOT EXISTS (
            SELECT 1 FROM library_shares ls
@@ -50,7 +51,6 @@ $stmt = ytdl_db()->prepare(
 $stmt->execute([
     ':me' => $user['id'],
     ':me2' => $user['id'],
-    ':audio_only' => $audioOnly,
 ]);
 
 $results = [];

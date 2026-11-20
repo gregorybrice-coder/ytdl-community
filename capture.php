@@ -6758,7 +6758,7 @@ unset($_SESSION['shared_urls']);
         '<button type="button" class="yt-elsewhere-add-btn">Ajouter</button>';
       item.querySelector('.yt-elsewhere-thumb').src = r.thumbnail || '';
       item.querySelector('.yt-elsewhere-title').textContent = r.title || '(sans titre)';
-      item.querySelector('.yt-elsewhere-meta').textContent = 'Chez ' + (r.owner_name || '?');
+      item.querySelector('.yt-elsewhere-meta').textContent = 'Chez ' + (r.owner_name || '?') + ' · ' + (Number(r.audio_only) === 1 ? 'audio' : 'clip');
       const addBtn = item.querySelector('.yt-elsewhere-add-btn');
       addBtn.addEventListener('click', async e => {
         e.stopPropagation();
