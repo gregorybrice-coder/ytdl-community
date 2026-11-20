@@ -309,8 +309,18 @@
   // Liste montrée par la molette : pendant une recherche, uniquement les
   // titres trouvés (voir searchItems), quel que soit le tri.
   function computeItems() {
-    const base = genreItems().concat(baseItems(), remoteItems());
-    return state.query.trim() ? searchItems(base, state.query) : base;
+    const searching = !!state.query.trim();
+    const base = genreItems().concat(searching ? searchPool() : baseItems(), remoteItems());
+    return searching ? searchItems(base, state.query) : base;
+  }
+
+  // Dans la bibliothèque, une recherche porte sur TOUS les titres (morceaux,
+  // clips, hors musique) quelle que soit la catégorie affichée : pas de
+  // distinction mp3 / clip. Une playlist, la liste des playlists et celle des
+  // genres gardent leur périmètre propre.
+  function searchPool() {
+    if (state.playlist || state.cat === 'list' || state.cat === 'genre') return baseItems();
+    return Y.sortTracks(library.tracks.slice(), state.sort);
   }
 
   // Comparaison sans casse ni accents (« Beyonce » trouve « Beyoncé »).
@@ -379,7 +389,7 @@
     const q = state.query.trim();
     if (library.error) { empty.replaceChildren(h('p', null, library.error)); empty.hidden = false; return; }
     if (q && !state.matches.length) {
-      empty.replaceChildren(h('p', null, 'Aucun titre ne correspond à « ' + q + ' »' + (baseItems().length ? ' ici.' : '.')));
+      empty.replaceChildren(h('p', null, 'Aucun titre ne correspond à « ' + q + ' »' + (searchPool().length && (state.playlist || state.cat === 'list' || state.cat === 'genre') ? ' ici.' : '.')));
       // On propose de chercher sur le serveur et sur YouTube (l'ex-« trouver
       // ailleurs » de l'interface classique).
       if (state.cat !== 'list' && state.cat !== 'genre') empty.append(h('button', { type: 'button', class: 'btn primary', onclick: () => openAdd({ query: q }) }, 'Chercher ailleurs'));
